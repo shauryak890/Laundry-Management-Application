@@ -86,10 +86,13 @@ class HomeScreen extends StatelessWidget {
                       unit: service['unit'],
                       color: service['color'],
                       onTap: () {
-                        // Set the selected service in the provider
-                        orderProvider.setSelectedService(service['id']);
-                        // Navigate to schedule screen
-                        context.push('${AppRoutes.schedule}?serviceId=${service['id']}');
+                        // Instead of directly navigating, use Future.microtask to separate state update from navigation
+                        Future.microtask(() {
+                          // Set the selected service in the provider
+                          orderProvider.setSelectedService(service['id']);
+                          // Navigate to schedule screen with the extra parameter
+                          context.push(AppRoutes.schedule, extra: service['id']);
+                        });
                       },
                     );
                   },

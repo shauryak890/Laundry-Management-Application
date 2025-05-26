@@ -31,23 +31,33 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     
-    // Ensure we have the correct service selected
-    orderProvider.setSelectedService(widget.serviceId);
-    
-    // Initialize with first address if available
-    _addressList.addAll(orderProvider.savedAddresses);
-    if (_addressList.isNotEmpty) {
-      _selectedAddress = _addressList[0];
-      orderProvider.setSelectedAddress(_selectedAddress!);
-    }
-    
-    // Initialize with default time slot
-    _selectedTimeSlot = orderProvider.timeSlot;
+    // Schedule the service selection after the frame is built to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      
+      // Ensure we have the correct service selected
+      orderProvider.setSelectedService(widget.serviceId);
+      
+      // Initialize with first address if available
+      _addressList.addAll(orderProvider.savedAddresses);
+      if (_addressList.isNotEmpty) {
+        setState(() {
+          _selectedAddress = _addressList[0];
+        });
+        orderProvider.setSelectedAddress(_selectedAddress!);
+      }
+      
+      // Initialize with default time slot
+      setState(() {
+        _selectedTimeSlot = orderProvider.timeSlot;
+      });
+    });
   }
 
   void _increaseQuantity() {
+    if (!mounted) return;
     setState(() {
       _quantity++;
     });
@@ -55,6 +65,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _decreaseQuantity() {
+    if (!mounted) return;
     if (_quantity > 1) {
       setState(() {
         _quantity--;
@@ -122,6 +133,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _onTimeSlotSelected(String slot) {
+    if (!mounted) return;
     setState(() {
       _selectedTimeSlot = slot;
     });
@@ -129,6 +141,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _onAddressSelected(String address) {
+    if (!mounted) return;
     setState(() {
       _selectedAddress = address;
     });
@@ -220,7 +233,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '\$${service['price'].toStringAsFixed(2)} / ${service['unit']}',
+                              '₹${service['price'].toStringAsFixed(0)} / ${service['unit']}',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppColors.primaryBlue,
                                 fontWeight: FontWeight.w500,
@@ -348,7 +361,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           Text(
-                            '\$${(service['price'] * _quantity).toStringAsFixed(2)}',
+                            '₹${(service['price'] * _quantity).toStringAsFixed(0)}',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
@@ -368,7 +381,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             ),
                           ),
                           Text(
-                            '\$${orderProvider.totalPrice.toStringAsFixed(2)}',
+                            '₹${orderProvider.totalPrice.toStringAsFixed(0)}',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primaryBlue,

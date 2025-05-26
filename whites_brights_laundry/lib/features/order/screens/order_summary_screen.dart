@@ -149,7 +149,7 @@ class OrderSummaryScreen extends StatelessWidget {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           Text(
-                            '\$${orderProvider.totalPrice.toStringAsFixed(2)}',
+                            '₹${orderProvider.totalPrice.toStringAsFixed(0)}',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
@@ -169,7 +169,7 @@ class OrderSummaryScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '\$${orderProvider.totalPrice.toStringAsFixed(2)}',
+                            '₹${orderProvider.totalPrice.toStringAsFixed(0)}',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primaryBlue,

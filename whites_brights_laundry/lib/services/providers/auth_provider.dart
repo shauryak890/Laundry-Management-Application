@@ -60,12 +60,10 @@ class AuthProvider extends ChangeNotifier {
       setLoading(true);
       setError(null);
       
-      // In a real app, we would verify OTP with Firebase Auth
-      // For now, we'll simulate the process and accept any 6-digit code
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // Simple validation for demo purposes
+      // Simple validation for demo purposes - we're not actually using Firebase
       if (otp.length == 6 && int.tryParse(otp) != null) {
+        // Simulate successful authentication
+        await Future.delayed(const Duration(seconds: 1));
         _isLoggedIn = true;
         notifyListeners();
         

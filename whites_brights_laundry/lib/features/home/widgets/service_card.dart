@@ -71,7 +71,7 @@ class ServiceCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    '\$${price.toStringAsFixed(2)}',
+                    '₹${price.toStringAsFixed(0)}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: AppColors.primaryBlue,

@@ -83,18 +83,18 @@ class AppTheme {
         fontSize: 14,
       ),
     ),
-    cardTheme: CardTheme(
-      elevation: 2,
+    cardTheme: CardThemeData(
+      elevation: 2.0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       clipBehavior: Clip.antiAlias,
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      elevation: 5,
+      elevation: 5.0,
     ),
   );
 }

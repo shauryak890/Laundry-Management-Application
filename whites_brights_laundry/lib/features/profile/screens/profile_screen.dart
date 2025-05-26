@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/constants.dart';
-import '../../../services/providers/auth_provider.dart';
-import '../../../services/providers/order_provider.dart';
+import '../../../models/user_model.dart';
+import '../../../models/address_model.dart';
+import '../../../services/providers/user_provider.dart';
+import '../../../services/providers/address_provider.dart';
+import '../../../services/firebase/auth_service_firebase.dart';
 import '../../../widgets/buttons.dart';
 import '../../../widgets/custom_text_field.dart';
 import '../widgets/address_tile.dart';
@@ -27,14 +31,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Initialize controllers with current values
-    _nameController.text = authProvider.userName;
-    _phoneController.text = authProvider.userPhone.replaceAll('+91', '');
-    
-    // Email is not stored in the provider in this demo, so we use a placeholder
-    _emailController.text = 'user@example.com';
+    // Initialize user data from Firebase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        
+        // Initialize controllers with current values
+        if (userProvider.currentUser != null) {
+          _nameController.text = userProvider.currentUser!.name;
+          _phoneController.text = userProvider.currentUser!.phone.replaceAll('+91', '');
+          _emailController.text = userProvider.currentUser!.email ?? 'user@example.com';
+        } else {
+          // Fallback to defaults if no user data yet
+          _nameController.text = 'Guest User';
+          _phoneController.text = '';
+          _emailController.text = 'user@example.com';
+        }
+      }
+    });
   }
 
   @override
@@ -54,12 +69,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _saveProfile() {
     if (_formKey.currentState!.validate()) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
       
-      // Update user profile
-      authProvider.updateUserProfile(
-        name: _nameController.text,
-      );
+      if (userProvider.currentUser != null) {
+        // Create updated user data
+        final updatedUser = UserModel(
+          id: userProvider.currentUser!.id,
+          name: _nameController.text,
+          phone: '+91${_phoneController.text.replaceAll('+91', '')}',
+          email: _emailController.text,
+          createdAt: userProvider.currentUser!.createdAt,
+          updatedAt: DateTime.now(),
+          phoneNumber: '+91${_phoneController.text.replaceAll('+91', '')}',
+        );
+        
+        // Update user profile in Firestore
+        userProvider.updateUser(updatedUser);
+      }
       
       setState(() {
         _isEditing = false;
@@ -91,8 +117,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(
             onPressed: () {
               if (_addressController.text.isNotEmpty) {
-                Provider.of<OrderProvider>(context, listen: false)
-                    .addAddress(_addressController.text);
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                final addressProvider = Provider.of<AddressProvider>(context, listen: false);
+                
+                if (userProvider.currentUser != null) {
+                  // Create new address
+                  final newAddress = AddressModel(
+                    id: '',
+                    userId: userProvider.currentUser!.id,
+                    addressLine1: _addressController.text,
+                    addressText: _addressController.text,
+                    isDefault: addressProvider.addresses.isEmpty,
+                    addressType: 'Home',
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                    city: '',
+                    state: '',
+                    postalCode: '',
+                  );
+                  
+                  // Add address to Firestore
+                  addressProvider.addAddress(
+                    addressLine1: _addressController.text,
+                    city: '',
+                    state: '',
+                    postalCode: '',
+                    addressType: 'Home',
+                    isDefault: addressProvider.addresses.isEmpty,
+                  );
+                }
+                
                 Navigator.pop(context);
                 _addressController.clear();
               }
@@ -116,9 +170,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Provider.of<AuthProvider>(context, listen: false).signOut();
-              context.go(AppRoutes.login);
+            onPressed: () async {
+              try {
+                Navigator.pop(context);
+                // Show loading indicator
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Signing out...')),
+                );
+                
+                // Sign out from Firebase
+                await AuthServiceFirebase().signOut();
+                
+                // Navigate to login screen
+                if (mounted) {
+                  context.go(AppRoutes.login);
+                }
+              } catch (e) {
+                // Show error message
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error signing out: $e')),
+                  );
+                }
+              }
             },
             child: const Text('Sign Out'),
           ),
@@ -129,8 +203,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final orderProvider = Provider.of<OrderProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context);
+    final addressProvider = Provider.of<AddressProvider>(context);
+    final user = userProvider.currentUser;
     
     return Scaffold(
       appBar: AppBar(
@@ -158,7 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         radius: 50,
                         backgroundColor: AppColors.primaryBlue,
                         child: Text(
-                          authProvider.userName.isNotEmpty ? authProvider.userName[0].toUpperCase() : 'U',
+                          userProvider.currentUser?.name.isNotEmpty ?? false ? userProvider.currentUser!.name[0].toUpperCase() : 'U',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 36,
@@ -266,7 +341,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 16),
                 
                 // Address List
-                if (orderProvider.savedAddresses.isEmpty)
+                if (addressProvider.isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else if (addressProvider.addresses.isEmpty)
                   const Text(
                     'No addresses saved yet. Add your first address.',
                     style: TextStyle(color: AppColors.textLight),
@@ -275,21 +352,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: orderProvider.savedAddresses.length,
+                    itemCount: addressProvider.addresses.length,
                     itemBuilder: (context, index) {
-                      final address = orderProvider.savedAddresses[index];
-                      final isSelected = address == orderProvider.selectedAddress;
+                      final address = addressProvider.addresses[index];
+                      final isSelected = address.isDefault;
                       
                       return AddressTile(
-                        address: address,
+                        address: address.addressText,
                         isSelected: isSelected,
                         onSelect: () {
-                          orderProvider.setSelectedAddress(address);
+                          // Set as default address
+                          addressProvider.setDefaultAddress(address.id);
                         },
                         onDelete: () {
-                          orderProvider.removeAddress(address);
+                          // Delete address from Firestore
+                          addressProvider.deleteAddress(address.id);
                         },
-                      );
+                      ).animate(delay: (index * 100).ms).fadeIn(duration: 300.ms);
                     },
                   ),
                 
