@@ -159,36 +159,9 @@ enum AuthorizationStatus {
 // Additional Firebase classes needed for mock implementation
 
 // Firebase class
-class Firebase {
-  static Future<FirebaseApp> initializeApp() async {
-    debugPrint('Mock Firebase.initializeApp() called');
-    return FirebaseApp();
-  }
-}
 
-class FirebaseApp {
-  final String name = 'mock-app';
-  final FirebaseOptions options = FirebaseOptions(
-    apiKey: 'mock-api-key',
-    appId: 'mock-app-id',
-    messagingSenderId: 'mock-sender-id',
-    projectId: 'mock-project-id',
-  );
-}
 
-class FirebaseOptions {
-  final String apiKey;
-  final String appId;
-  final String messagingSenderId;
-  final String projectId;
-  
-  FirebaseOptions({
-    required this.apiKey,
-    required this.appId,
-    required this.messagingSenderId,
-    required this.projectId,
-  });
-}
+
 
 // FirebaseMessaging class with static methods
 class FirebaseMessaging {

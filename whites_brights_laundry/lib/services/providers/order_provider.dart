@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/map_utils.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants.dart';
 
@@ -146,7 +147,7 @@ class OrderProvider extends ChangeNotifier {
       return;
     }
     
-    double servicePrice = selectedService!['price'];
+    double servicePrice = getMapValue<num>(selectedService, 'price')?.toDouble() ?? 0.0;
     _totalPrice = servicePrice * _itemCount;
     
     notifyListeners();

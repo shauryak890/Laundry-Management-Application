@@ -15,24 +15,28 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _verifyPhone() async {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final phoneNumber = '+91${_phoneController.text}'; // Adding country code for India
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await authProvider.verifyPhoneNumber(phoneNumber);
+    // For now, we'll call a simpler login method instead of phone verification
+    final success = await authProvider.loginWithEmailPassword(email, password);
     if (success && mounted) {
-      context.push('${AppRoutes.otp}?phone=${_phoneController.text}');
+      context.go(AppRoutes.home);
     }
   }
 
@@ -51,13 +55,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // App Logo (placeholder)
+                  // App Logo 
                   Container(
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
                       color: AppColors.primaryBlue,
                       borderRadius: BorderRadius.circular(60),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primaryBlue.withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
                     ),
                     child: const Icon(
                       Icons.local_laundry_service,
@@ -69,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   // Welcome Text
                   Text(
-                    AppStrings.welcome,
+                    'Welcome Back',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.primaryBlue,
@@ -79,32 +90,121 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   
                   Text(
-                    AppStrings.tagline,
+                    'Sign in to continue to Whites & Brights',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppColors.textLight,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
                   
-                  // Phone Number Input
-                  PhoneTextField(controller: _phoneController),
+                  // Email Input
+                  CustomTextField(
+                    hint: 'Email',
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    prefixIcon: Icons.email,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your email';
+                      }
+                      if (!value.contains('@') || !value.contains('.')) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Password Input
+                  CustomTextField(
+                    hint: 'Password',
+                    controller: _passwordController,
+                    obscureText: true,
+                    prefixIcon: Icons.lock,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  
+                  // Forgot Password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        // Navigate to forgot password screen
+                      },
+                      child: Text(
+                        'Forgot Password?',
+                        style: TextStyle(
+                          color: AppColors.primaryBlue,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
                   
                   if (authProvider.error != null) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      authProvider.error!,
-                      style: const TextStyle(color: AppColors.errorRed),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorRed.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: AppColors.errorRed),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              authProvider.error!,
+                              style: const TextStyle(color: AppColors.errorRed),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                   
                   const SizedBox(height: 32),
                   
-                  // Continue Button
+                  // Login Button
                   PrimaryButton(
-                    text: AppStrings.continueText,
-                    onPressed: _verifyPhone,
+                    text: 'Sign In',
+                    onPressed: _login,
                     isLoading: authProvider.isLoading,
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Sign Up Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: TextStyle(color: AppColors.textLight),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          context.push(AppRoutes.signup);
+                        },
+                        child: Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

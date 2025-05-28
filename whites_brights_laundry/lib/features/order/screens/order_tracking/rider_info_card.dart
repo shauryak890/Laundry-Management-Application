@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/constants.dart';
 
@@ -53,7 +52,7 @@ class RiderInfoCard extends StatelessWidget {
                           size: 32,
                         )
                       : null,
-                ).animate().scale(delay: 300.ms, duration: 400.ms),
+                ),
                 const SizedBox(width: 16),
                 
                 // Rider details
@@ -107,7 +106,7 @@ class RiderInfoCard extends StatelessWidget {
           ],
         ),
       ),
-    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2, end: 0);
+    );
   }
 
   void _showCallDialog(BuildContext context) {

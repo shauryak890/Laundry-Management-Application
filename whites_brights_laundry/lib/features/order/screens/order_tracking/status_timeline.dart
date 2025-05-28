@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/constants.dart';
 import '../../../../models/order_model.dart';
@@ -15,7 +14,7 @@ class StatusTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Define all possible statuses in order
-    final allStatuses = OrderStatus.allStatuses;
+    final allStatuses = [OrderStatus.scheduled, OrderStatus.pickedUp, OrderStatus.inProcess, OrderStatus.outForDelivery, OrderStatus.delivered, OrderStatus.cancelled];
     
     // Determine the current status index
     final currentStatusIndex = allStatuses.indexOf(order.status);
@@ -63,11 +62,11 @@ class StatusTimeline extends StatelessWidget {
                 
                 return _buildTimelineItem(
                   context,
-                  status: allStatuses[index],
+                  status: allStatuses[index].name,
                   isCompleted: isCompleted,
                   isActive: isActive,
                   isLast: isLast,
-                  animationDelay: (index * 300).ms,
+                  animationDelay: Duration(milliseconds: 0),
                 );
               },
             ),
@@ -87,7 +86,7 @@ class StatusTimeline extends StatelessWidget {
   }) {
     // Define colors based on status
     final Color color = isActive || isCompleted
-        ? OrderModel.getStatusColor(status)
+        ? Colors.blue
         : Colors.grey.shade300;
     
     return Row(
@@ -109,13 +108,13 @@ class StatusTimeline extends StatelessWidget {
               child: isCompleted
                   ? const Icon(Icons.check, color: Colors.white, size: 16)
                   : null,
-            ).animate(delay: animationDelay).scale(duration: 400.ms),
+            ),
             if (!isLast)
               Container(
                 width: 2,
                 height: 50,
                 color: isCompleted ? color : Colors.grey.shade300,
-              ).animate(delay: animationDelay + 200.ms).fadeIn(duration: 300.ms).shimmer(),
+              ),
           ],
         ),
         const SizedBox(width: 16),
@@ -130,7 +129,7 @@ class StatusTimeline extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                   color: isActive || isCompleted
-                      ? OrderModel.getStatusColor(status)
+                      ? Colors.blue
                       : Colors.grey.shade600,
                 ),
               ),
@@ -148,7 +147,7 @@ class StatusTimeline extends StatelessWidget {
           ),
         ),
       ],
-    ).animate(delay: animationDelay).fadeIn(duration: 500.ms).slideX(begin: 0.2, end: 0);
+    );
   }
 
   String _getStatusDescription(String status) {

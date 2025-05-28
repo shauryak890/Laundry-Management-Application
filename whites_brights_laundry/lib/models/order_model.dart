@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:whites_brights_laundry/services/firebase/firebase_types.dart';
 
+enum OrderStatus {
+  scheduled,
+  pickedUp,
+  inProcess,
+  outForDelivery,
+  delivered,
+  cancelled,
+}
+
 class OrderModel {
   final String id;
   final String userId;
@@ -10,18 +19,15 @@ class OrderModel {
   final String serviceUnit;
   final int quantity;
   final double totalPrice;
+  final OrderStatus status;
   final DateTime pickupDate;
   final DateTime deliveryDate;
   final String timeSlot;
   final String addressId;
   final String addressText;
-  final String status;
-  final String? riderId;
-  final String? riderName;
-  final String? riderPhone;
+  final Map<String, DateTime> statusTimestamps;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final Map<String, DateTime>? statusTimestamps;
 
   OrderModel({
     required this.id,
@@ -32,164 +38,139 @@ class OrderModel {
     required this.serviceUnit,
     required this.quantity,
     required this.totalPrice,
+    required this.status,
     required this.pickupDate,
     required this.deliveryDate,
     required this.timeSlot,
     required this.addressId,
     required this.addressText,
-    required this.status,
-    this.riderId,
-    this.riderName,
-    this.riderPhone,
+    required this.statusTimestamps,
     required this.createdAt,
     required this.updatedAt,
-    this.statusTimestamps,
   });
 
-  factory OrderModel.fromMap(Map<String, dynamic> map) {
-    // Parse status timestamps
-    Map<String, DateTime> statusTimestamps = {};
-    if (map['statusTimestamps'] != null) {
-      (map['statusTimestamps'] as Map<String, dynamic>).forEach((key, value) {
-        statusTimestamps[key] = (value as Timestamp).toDate();
-      });
-    }
-
+  factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
-      id: map['id'] ?? '',
-      userId: map['userId'] ?? '',
-      serviceId: map['serviceId'] ?? '',
-      serviceName: map['serviceName'] ?? '',
-      servicePrice: (map['servicePrice'] ?? 0.0).toDouble(),
-      serviceUnit: map['serviceUnit'] ?? '',
-      quantity: map['quantity'] ?? 0,
-      totalPrice: (map['totalPrice'] ?? 0.0).toDouble(),
-      pickupDate: (map['pickupDate'] as Timestamp).toDate(),
-      deliveryDate: (map['deliveryDate'] as Timestamp).toDate(),
-      timeSlot: map['timeSlot'] ?? 'Morning',
-      addressId: map['addressId'] ?? '',
-      addressText: map['addressText'] ?? '',
-      status: map['status'] ?? 'Scheduled',
-      riderId: map['riderId'],
-      riderName: map['riderName'],
-      riderPhone: map['riderPhone'],
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
-      statusTimestamps: statusTimestamps.isNotEmpty ? statusTimestamps : null,
+      id: json['id'] ?? json['_id'] ?? '',
+      userId: json['userId'] ?? '',
+      serviceId: json['serviceId'] ?? '',
+      serviceName: json['serviceName'] ?? '',
+      servicePrice: (json['servicePrice'] is int) 
+          ? (json['servicePrice'] as int).toDouble() 
+          : json['servicePrice']?.toDouble() ?? 0.0,
+      serviceUnit: json['serviceUnit'] ?? '',
+      quantity: json['quantity']?.toInt() ?? 0,
+      totalPrice: (json['totalPrice'] is int) 
+          ? (json['totalPrice'] as int).toDouble() 
+          : json['totalPrice']?.toDouble() ?? 0.0,
+      status: _parseStatus(json['status']),
+      pickupDate: json['pickupDate'] != null 
+          ? DateTime.parse(json['pickupDate']) 
+          : DateTime.now(),
+      deliveryDate: json['deliveryDate'] != null 
+          ? DateTime.parse(json['deliveryDate']) 
+          : DateTime.now(),
+      timeSlot: json['timeSlot'] ?? '',
+      addressId: json['addressId'] ?? '',
+      addressText: json['addressText'] ?? '',
+      statusTimestamps: _parseStatusTimestamps(json['statusTimestamps']),
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt']) 
+          : DateTime.now(),
     );
   }
 
-  Map<String, dynamic> toMap() {
-    // Convert status timestamps to Firestore timestamps
-    Map<String, Timestamp>? firestoreTimestamps;
-    if (statusTimestamps != null) {
-      firestoreTimestamps = {};
-      statusTimestamps!.forEach((key, value) {
-        firestoreTimestamps![key] = Timestamp.fromDate(value);
+  // For backward compatibility
+  factory OrderModel.fromMap(Map<String, dynamic> map) => OrderModel.fromJson(map);
+
+  static Map<String, DateTime> _parseStatusTimestamps(dynamic timestamps) {
+    if (timestamps == null) return {};
+
+    final Map<String, DateTime> result = {};
+    
+    if (timestamps is Map<String, dynamic>) {
+      timestamps.forEach((key, value) {
+        if (value is String) {
+          try {
+            result[key] = DateTime.parse(value);
+          } catch (e) {
+            // Ignore invalid date strings
+          }
+        }
       });
     }
+    
+    return result;
+  }
+
+  static OrderStatus _parseStatus(String? status) {
+    switch (status) {
+      case 'scheduled':
+        return OrderStatus.scheduled;
+      case 'pickedUp':
+        return OrderStatus.pickedUp;
+      case 'inProcess':
+        return OrderStatus.inProcess;
+      case 'outForDelivery':
+        return OrderStatus.outForDelivery;
+      case 'delivered':
+        return OrderStatus.delivered;
+      case 'cancelled':
+        return OrderStatus.cancelled;
+      default:
+        return OrderStatus.scheduled;
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> statusTimestampsMap = {};
+    statusTimestamps.forEach((key, value) {
+      statusTimestampsMap[key] = value.toIso8601String();
+    });
 
     return {
-      'id': id,
-      'userId': userId,
       'serviceId': serviceId,
       'serviceName': serviceName,
       'servicePrice': servicePrice,
       'serviceUnit': serviceUnit,
       'quantity': quantity,
       'totalPrice': totalPrice,
-      'pickupDate': Timestamp.fromDate(pickupDate),
-      'deliveryDate': Timestamp.fromDate(deliveryDate),
+      'status': _statusToString(status),
+      'pickupDate': pickupDate.toIso8601String(),
+      'deliveryDate': deliveryDate.toIso8601String(),
       'timeSlot': timeSlot,
       'addressId': addressId,
       'addressText': addressText,
-      'status': status,
-      'riderId': riderId,
-      'riderName': riderName,
-      'riderPhone': riderPhone,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
-      'statusTimestamps': firestoreTimestamps,
+      'statusTimestamps': statusTimestampsMap,
+      // Don't include id, userId, createdAt, updatedAt as they're managed by the server
     };
   }
 
-  // Helper method to get the color based on order status
-  static Color getStatusColor(String status) {
+  // For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
+
+  static String _statusToString(OrderStatus status) {
     switch (status) {
-      case 'Scheduled':
-        return Colors.blue; // Blue
-      case 'Picked Up':
-        return Colors.orange; // Orange
-      case 'In Process':
-        return Colors.purple; // Purple
-      case 'Out for Delivery':
-        return Colors.teal; // Teal
-      case 'Delivered':
-        return Colors.green; // Green
-      case 'Cancelled':
-        return Colors.red; // Red
+      case OrderStatus.scheduled:
+        return 'scheduled';
+      case OrderStatus.pickedUp:
+        return 'pickedUp';
+      case OrderStatus.inProcess:
+        return 'inProcess';
+      case OrderStatus.outForDelivery:
+        return 'outForDelivery';
+      case OrderStatus.delivered:
+        return 'delivered';
+      case OrderStatus.cancelled:
+        return 'cancelled';
       default:
-        return Colors.blueGrey; // Grey
+        return 'scheduled';
     }
   }
 
-  // Helper method to update order status with timestamp
-  OrderModel updateStatus(String newStatus) {
-    final now = DateTime.now();
-    final newTimestamps = statusTimestamps ?? {};
-    newTimestamps[newStatus] = now;
-
-    return OrderModel(
-      id: id,
-      userId: userId,
-      serviceId: serviceId,
-      serviceName: serviceName,
-      servicePrice: servicePrice,
-      serviceUnit: serviceUnit,
-      quantity: quantity,
-      totalPrice: totalPrice,
-      pickupDate: pickupDate,
-      deliveryDate: deliveryDate,
-      timeSlot: timeSlot,
-      addressId: addressId,
-      addressText: addressText,
-      status: newStatus,
-      riderId: riderId,
-      riderName: riderName,
-      riderPhone: riderPhone,
-      createdAt: createdAt,
-      updatedAt: now,
-      statusTimestamps: newTimestamps,
-    );
-  }
-
-  // Helper method to assign a rider to the order
-  OrderModel assignRider(String riderId, String riderName, String riderPhone) {
-    return OrderModel(
-      id: id,
-      userId: userId,
-      serviceId: serviceId,
-      serviceName: serviceName,
-      servicePrice: servicePrice,
-      serviceUnit: serviceUnit,
-      quantity: quantity,
-      totalPrice: totalPrice,
-      pickupDate: pickupDate,
-      deliveryDate: deliveryDate,
-      timeSlot: timeSlot,
-      addressId: addressId,
-      addressText: addressText,
-      status: status,
-      riderId: riderId,
-      riderName: riderName,
-      riderPhone: riderPhone,
-      createdAt: createdAt,
-      updatedAt: DateTime.now(),
-      statusTimestamps: statusTimestamps,
-    );
-  }
-  
-  // Helper method to create a copy of this OrderModel with some fields replaced
   OrderModel copyWith({
     String? id,
     String? userId,
@@ -199,18 +180,15 @@ class OrderModel {
     String? serviceUnit,
     int? quantity,
     double? totalPrice,
+    OrderStatus? status,
     DateTime? pickupDate,
     DateTime? deliveryDate,
     String? timeSlot,
     String? addressId,
     String? addressText,
-    String? status,
-    String? riderId,
-    String? riderName,
-    String? riderPhone,
+    Map<String, DateTime>? statusTimestamps,
     DateTime? createdAt,
     DateTime? updatedAt,
-    Map<String, DateTime>? statusTimestamps,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -221,24 +199,33 @@ class OrderModel {
       serviceUnit: serviceUnit ?? this.serviceUnit,
       quantity: quantity ?? this.quantity,
       totalPrice: totalPrice ?? this.totalPrice,
+      status: status ?? this.status,
       pickupDate: pickupDate ?? this.pickupDate,
       deliveryDate: deliveryDate ?? this.deliveryDate,
       timeSlot: timeSlot ?? this.timeSlot,
       addressId: addressId ?? this.addressId,
       addressText: addressText ?? this.addressText,
-      status: status ?? this.status,
-      riderId: riderId ?? this.riderId,
-      riderName: riderName ?? this.riderName,
-      riderPhone: riderPhone ?? this.riderPhone,
+      statusTimestamps: statusTimestamps ?? this.statusTimestamps,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      statusTimestamps: statusTimestamps ?? this.statusTimestamps,
+    );
+  }
+
+  // Update order status
+  OrderModel updateStatus(OrderStatus newStatus) {
+    final updatedStatusTimestamps = Map<String, DateTime>.from(statusTimestamps);
+    updatedStatusTimestamps[_statusToString(newStatus)] = DateTime.now();
+    
+    return copyWith(
+      status: newStatus,
+      statusTimestamps: updatedStatusTimestamps,
+      updatedAt: DateTime.now(),
     );
   }
 }
 
 // Constants for order status
-class OrderStatus {
+class OrderStatusConstants {
   static const String scheduled = 'Scheduled';
   static const String pickedUp = 'Picked Up';
   static const String inProcess = 'In Process';

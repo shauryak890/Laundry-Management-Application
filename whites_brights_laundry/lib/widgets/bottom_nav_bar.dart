@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../core/constants.dart';
 
@@ -92,10 +91,7 @@ class BottomNavBar extends StatelessWidget {
               isSelected ? activeIcon : icon,
               color: isSelected ? AppColors.primaryBlue : AppColors.textLight,
             )
-                .animate(target: isSelected ? 1 : 0)
-                .scaleXY(duration: 200.ms, begin: 1.0, end: 1.2)
-                .then()
-                .scaleXY(duration: 200.ms, begin: 1.2, end: 1.0),
+                ,
             const SizedBox(height: 4),
             Text(
               label,

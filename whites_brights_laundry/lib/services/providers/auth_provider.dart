@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import '../mongodb/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  String _userPhone = '';
+  String _userId = '';
+  String _userEmail = '';
   String _userName = 'User';
   bool _isLoggedIn = false;
   bool _isLoading = false;
   String? _error;
+  final AuthService _authService = AuthService();
 
   // Getters
-  String get userPhone => _userPhone;
+  String get userId => _userId;
+  String get userEmail => _userEmail;
   String get userName => _userName;
   bool get isLoggedIn => _isLoggedIn;
   bool get isLoading => _isLoading;
@@ -32,38 +36,18 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Phone number verification
-  Future<bool> verifyPhoneNumber(String phoneNumber) async {
+  // Login with email and password
+  Future<bool> loginWithEmailPassword(String email, String password) async {
     try {
       setLoading(true);
       setError(null);
       
-      // In a real app, we would use Firebase Auth to send OTP
-      // For now, we'll simulate the process
-      await Future.delayed(const Duration(seconds: 2));
+      final response = await _authService.login(email, password);
       
-      _userPhone = phoneNumber;
-      notifyListeners();
-      
-      setLoading(false);
-      return true;
-    } catch (e) {
-      setLoading(false);
-      setError('Failed to send verification code: ${e.toString()}');
-      return false;
-    }
-  }
-
-  // OTP verification
-  Future<bool> verifyOTP(String otp) async {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Simple validation for demo purposes - we're not actually using Firebase
-      if (otp.length == 6 && int.tryParse(otp) != null) {
-        // Simulate successful authentication
-        await Future.delayed(const Duration(seconds: 1));
+      if (response != null) {
+        _userId = response['user']['_id'] ?? '';
+        _userEmail = email;
+        _userName = response['user']['name'] ?? 'User';
         _isLoggedIn = true;
         notifyListeners();
         
@@ -71,12 +55,41 @@ class AuthProvider extends ChangeNotifier {
         return true;
       } else {
         setLoading(false);
-        setError('Invalid OTP. Please enter a valid 6-digit code.');
+        setError('Invalid credentials. Please try again.');
         return false;
       }
     } catch (e) {
       setLoading(false);
-      setError('Failed to verify OTP: ${e.toString()}');
+      setError('Login failed: ${e.toString()}');
+      return false;
+    }
+  }
+
+  // Register with email, password, phone and name
+  Future<bool> registerWithEmailPassword(String name, String email, String phone, String password) async {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      final response = await _authService.register(name, email, phone, password);
+      
+      if (response != null) {
+        _userId = response['user']['_id'] ?? '';
+        _userEmail = email;
+        _userName = name;
+        _isLoggedIn = true;
+        notifyListeners();
+        
+        setLoading(false);
+        return true;
+      } else {
+        setLoading(false);
+        setError('Registration failed. Please try again.');
+        return false;
+      }
+    } catch (e) {
+      setLoading(false);
+      setError('Registration failed: ${e.toString()}');
       return false;
     }
   }
@@ -91,8 +104,15 @@ class AuthProvider extends ChangeNotifier {
 
   // Sign out
   Future<void> signOut() async {
-    _isLoggedIn = false;
-    _userPhone = '';
-    notifyListeners();
+    try {
+      await _authService.logout();
+      _isLoggedIn = false;
+      _userId = '';
+      _userEmail = '';
+      _userName = 'User';
+      notifyListeners();
+    } catch (e) {
+      setError('Logout failed: ${e.toString()}');
+    }
   }
 }

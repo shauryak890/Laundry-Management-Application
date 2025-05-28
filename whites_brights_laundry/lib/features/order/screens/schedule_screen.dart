@@ -4,10 +4,25 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants.dart';
-import '../../../services/providers/order_provider.dart';
+import '../../../core/map_utils.dart';
+import '../../../services/providers/order_provider_mongodb.dart';
+import '../../../services/providers/address_provider_mongodb.dart';
+import '../../../models/address_model.dart';
+import '../../../services/providers/service_provider.dart';
 import '../../../widgets/buttons.dart';
+import '../../../widgets/bottom_nav_bar.dart';
 import '../widgets/dropdown_selector.dart';
 import '../widgets/date_picker_field.dart';
+
+Color? parseColor(dynamic colorValue) {
+  if (colorValue is int) return Color(colorValue);
+  if (colorValue is String) {
+    String hex = colorValue.replaceAll('#', '').replaceAll('0x', '');
+    if (hex.length == 6) hex = 'FF$hex'; // add alpha if missing
+    return Color(int.tryParse('0x$hex') ?? 0xFF000000);
+  }
+  return null;
+}
 
 class ScheduleScreen extends StatefulWidget {
   final int serviceId;
@@ -24,8 +39,8 @@ class ScheduleScreen extends StatefulWidget {
 class _ScheduleScreenState extends State<ScheduleScreen> {
   final List<String> _timeSlots = ['Morning', 'Afternoon', 'Evening'];
   String _selectedTimeSlot = 'Morning';
-  final List<String> _addressList = [];
-  String? _selectedAddress;
+  List<AddressModel> _addressList = [];
+  String? _selectedAddressId;
   int _quantity = 1;
 
   @override
@@ -38,15 +53,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
       
       // Ensure we have the correct service selected
-      orderProvider.setSelectedService(widget.serviceId);
+      final serviceProvider = Provider.of<ServiceProvider>(context, listen: false);
+      final service = serviceProvider.services.firstWhere(
+        (s) => s['id'] == widget.serviceId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (service.isNotEmpty) {
+        orderProvider.setSelectedService(service['id']);
+      }
       
-      // Initialize with first address if available
-      _addressList.addAll(orderProvider.savedAddresses);
+      // Fetch addresses from AddressProvider
+      final addressProvider = Provider.of<AddressProvider>(context, listen: false);
+      _addressList = List<AddressModel>.from(addressProvider.addresses);
       if (_addressList.isNotEmpty) {
         setState(() {
-          _selectedAddress = _addressList[0];
+          _selectedAddressId = _addressList[0].id;
         });
-        orderProvider.setSelectedAddress(_selectedAddress!);
+        orderProvider.setSelectedAddress(_selectedAddressId!);
       }
       
       // Initialize with default time slot
@@ -103,18 +126,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Future<void> _selectDeliveryDate(BuildContext context) async {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final DateTime initialDate = orderProvider.deliveryDate ?? 
-        (orderProvider.pickupDate?.add(const Duration(days: 1)) ?? 
-        DateTime.now().add(const Duration(days: 2)));
-    
-    // Ensure minimum delivery date is day after pickup
-    final DateTime minDate = orderProvider.pickupDate?.add(const Duration(days: 1)) ?? 
-        DateTime.now().add(const Duration(days: 1));
+      (orderProvider.pickupDate?.add(const Duration(days: 1)) ?? 
+      DateTime.now().add(const Duration(days: 2)));
     
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: minDate,
-      lastDate: DateTime.now().add(const Duration(days: 30)),
+      firstDate: orderProvider.pickupDate ?? DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 60)),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -133,46 +152,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _onTimeSlotSelected(String slot) {
-    if (!mounted) return;
     setState(() {
       _selectedTimeSlot = slot;
     });
     Provider.of<OrderProvider>(context, listen: false).setTimeSlot(slot);
   }
 
-  void _onAddressSelected(String address) {
-    if (!mounted) return;
-    setState(() {
-      _selectedAddress = address;
-    });
-    Provider.of<OrderProvider>(context, listen: false).setSelectedAddress(address);
+  void _onAddressSelected(String? addressId) {
+    if (addressId != null) {
+      setState(() {
+        _selectedAddressId = addressId;
+      });
+      Provider.of<OrderProvider>(context, listen: false).setSelectedAddress(addressId);
+    }
   }
 
   void _confirmSchedule() {
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    
-    // Validate that all required fields are filled
-    if (orderProvider.pickupDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a pickup date')),
-      );
-      return;
-    }
-    
-    if (orderProvider.deliveryDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a delivery date')),
-      );
-      return;
-    }
-    
-    if (orderProvider.selectedAddress.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an address')),
-      );
-      return;
-    }
-    
     // Navigate to order summary
     context.push(AppRoutes.orderSummary);
   }
@@ -180,19 +175,54 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final orderProvider = Provider.of<OrderProvider>(context);
-    final service = orderProvider.selectedService;
+    final serviceProvider = Provider.of<ServiceProvider>(context, listen: false);
+    final serviceId = orderProvider.selectedService;
     
-    if (service == null) {
-      // Service not found, go back to home
-      Future.microtask(() => context.go(AppRoutes.home));
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+    // Get the full service details from ServiceProvider
+    final service = serviceProvider.services.firstWhere(
+      (s) => s['id'].toString() == serviceId,
+      orElse: () => {
+        'id': 1,
+        'name': 'Wash & Fold',
+        'price': 199, // Updated price for Wash & Fold
+        'unit': 'kg',
+        'color': '#2196F3',
+      },
+    );
+    
+    // Extract service fields safely
+    String serviceName = service['name'] ?? 'Wash & Fold';
+    String serviceUnit = service['unit'] ?? 'kg';
+    num servicePrice = service['price'] ?? 199; // Updated price for Wash & Fold
+    Color? serviceColor = parseColor(service['color']);
+    
+    // Ensure we have a default price if none is available
+    if (servicePrice <= 0) {
+      servicePrice = 199; // Updated default price
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.schedule),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: 2, // Schedule tab
+        onItemSelected: (index) {
+          // Handle navigation based on the selected index
+          switch (index) {
+            case 0: // Home
+              context.go(AppRoutes.home);
+              break;
+            case 1: // Orders
+              context.push('/order-history');
+              break;
+            case 2: // Schedule - already here
+              break;
+            case 3: // Profile
+              context.push(AppRoutes.profile);
+              break;
+          }
+        },
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -211,13 +241,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: service['color'],
+                          color: serviceColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
                           Icons.local_laundry_service,
-                          color: AppColors.primaryBlue,
-                          size: 30,
+                          color: Colors.white,
+                          size: 32,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -226,14 +256,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              service['name'],
+                              serviceName,
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '₹${service['price'].toStringAsFixed(0)} / ${service['unit']}',
+                              '₹${servicePrice.toStringAsFixed(0)} / $serviceUnit',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppColors.primaryBlue,
                                 fontWeight: FontWeight.w500,
@@ -242,8 +272,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           ],
                         ),
                       ),
-                      
-                      // Quantity selector
                       Row(
                         children: [
                           IconButton(
@@ -276,11 +304,31 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              DatePickerField(
-                value: orderProvider.pickupDate == null
-                    ? 'Select Pickup Date'
-                    : orderProvider.formattedPickupDate,
+              GestureDetector(
                 onTap: () => _selectPickupDate(context),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        orderProvider.formattedPickupDate.isEmpty
+                          ? 'Select Pickup Date'
+                          : orderProvider.formattedPickupDate,
+                        style: TextStyle(
+                          color: orderProvider.formattedPickupDate.isEmpty
+                            ? Colors.grey[600]
+                            : Colors.black,
+                        ),
+                      ),
+                      const Icon(Icons.calendar_today, color: AppColors.primaryBlue),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               
@@ -292,11 +340,31 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              DatePickerField(
-                value: orderProvider.deliveryDate == null
-                    ? 'Select Delivery Date'
-                    : orderProvider.formattedDeliveryDate,
+              GestureDetector(
                 onTap: () => _selectDeliveryDate(context),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        orderProvider.formattedDeliveryDate.isEmpty
+                          ? 'Select Delivery Date'
+                          : orderProvider.formattedDeliveryDate,
+                        style: TextStyle(
+                          color: orderProvider.formattedDeliveryDate.isEmpty
+                            ? Colors.grey[600]
+                            : Colors.black,
+                        ),
+                      ),
+                      const Icon(Icons.calendar_today, color: AppColors.primaryBlue),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               
@@ -331,10 +399,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 )
               else
                 DropdownSelector<String>(
-                  items: _addressList,
-                  selectedItem: _selectedAddress ?? _addressList[0],
+                  items: _addressList.map((a) => a.id as String).toList(),
+                  selectedItem: _selectedAddressId ?? _addressList[0].id,
                   onChanged: _onAddressSelected,
-                  labelBuilder: (item) => item,
+                  labelBuilder: (id) {
+                    final address = _addressList.firstWhere(
+                      (a) => a.id == id, 
+                      orElse: () => AddressModel(
+                        id: id, 
+                        userId: '', 
+                        addressLine1: '', 
+                        city: '', 
+                        state: '', 
+                        pincode: '', 
+                        isDefault: false, 
+                        label: 'home'
+                      )
+                    );
+                    return '${address.addressLine1}, ${address.city} (${address.pincode})';
+                  },
                 ),
               const SizedBox(height: 32),
               
@@ -357,11 +440,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '${service['name']} x $_quantity',
+                            '$serviceName x $_quantity',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           Text(
-                            '₹${(service['price'] * _quantity).toStringAsFixed(0)}',
+                            '₹${(servicePrice * _quantity).toStringAsFixed(0)}',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
@@ -381,7 +464,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             ),
                           ),
                           Text(
-                            '₹${orderProvider.totalPrice.toStringAsFixed(0)}',
+                            '₹${(servicePrice * _quantity).toStringAsFixed(0)}',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primaryBlue,

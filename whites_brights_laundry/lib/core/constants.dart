@@ -57,7 +57,8 @@ class AppStrings {
 
 class AppRoutes {
   static const login = '/login';
-  static const otp = '/otp';
+  static const signup = '/signup';
+  // OTP route removed as we're using email/password auth
   static const home = '/home';
   static const schedule = '/schedule';
   static const orderSummary = '/order-summary';

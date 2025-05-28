@@ -1,4 +1,4 @@
-import 'package:whites_brights_laundry/services/firebase/firebase_types.dart';
+// No Firebase imports needed for MongoDB
 
 class AddressModel {
   final String id;
@@ -7,11 +7,11 @@ class AddressModel {
   final String? addressLine2;
   final String city;
   final String state;
-  final String postalCode;
+  final String pincode;
   final String? landmark;
   final bool isDefault;
-  final String addressType; // Home, Work, Other
-  final GeoPoint? location;
+  final String label; // home, work, other
+  final String? country;
   final String addressText; // Full address as a single string
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -23,64 +23,74 @@ class AddressModel {
     this.addressLine2,
     required this.city,
     required this.state,
-    required this.postalCode,
+    required this.pincode,
     this.landmark,
     required this.isDefault,
-    required this.addressType,
-    this.location,
+    required this.label,
+    this.country = 'India',
     String? addressText,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : this.addressText = addressText ?? _generateAddressText(addressLine1, addressLine2, city, state, postalCode, landmark),
+  }) : this.addressText = addressText ?? _generateAddressText(addressLine1, addressLine2, city, state, pincode, landmark),
        this.createdAt = createdAt ?? DateTime.now(),
        this.updatedAt = updatedAt ?? DateTime.now();
        
   // Helper to generate full address text
-  static String _generateAddressText(String addressLine1, String? addressLine2, String city, String state, String postalCode, String? landmark) {
+  static String _generateAddressText(String addressLine1, String? addressLine2, String city, String state, String pincode, String? landmark) {
     final parts = [
       addressLine1,
       if (addressLine2 != null && addressLine2.isNotEmpty) addressLine2,
       if (landmark != null && landmark.isNotEmpty) 'Near $landmark',
       city,
-      '$state - $postalCode',
+      '$state - $pincode',
     ];
     return parts.join(', ');
   }
 
-  factory AddressModel.fromMap(Map<String, dynamic> map) {
+  factory AddressModel.fromJson(Map<String, dynamic> json) {
     return AddressModel(
-      id: map['id'] ?? '',
-      userId: map['userId'] ?? '',
-      addressLine1: map['addressLine1'] ?? '',
-      addressLine2: map['addressLine2'],
-      city: map['city'] ?? '',
-      state: map['state'] ?? '',
-      postalCode: map['postalCode'] ?? '',
-      landmark: map['landmark'],
-      isDefault: map['isDefault'] ?? false,
-      addressType: map['addressType'] ?? 'Home',
-      location: map['location'],
+      id: json['id'] ?? json['_id'] ?? '',
+      userId: json['userId'] ?? '',
+      addressLine1: json['addressLine1'] ?? '',
+      addressLine2: json['addressLine2'],
+      city: json['city'] ?? '',
+      state: json['state'] ?? '',
+      pincode: json['pincode'] ?? '',
+      landmark: json['landmark'],
+      isDefault: json['isDefault'] ?? false,
+      label: json['label'] ?? 'home',
+      country: json['country'],
+      addressText: json['addressText'],
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt']) 
+          : DateTime.now(),
     );
   }
+  
+  // For backward compatibility
+  factory AddressModel.fromMap(Map<String, dynamic> map) => AddressModel.fromJson(map);
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'userId': userId,
       'addressLine1': addressLine1,
       'addressLine2': addressLine2,
       'city': city,
       'state': state,
-      'postalCode': postalCode,
+      'pincode': pincode,
       'landmark': landmark,
       'isDefault': isDefault,
-      'addressType': addressType,
-      'location': location,
+      'label': label,
+      'country': country,
       'addressText': addressText,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      // Don't include id, userId, createdAt, updatedAt as they're managed by the server
     };
   }
+  
+  // For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
   
   // CopyWith method for creating a new instance with modified fields
   AddressModel copyWith({
@@ -90,11 +100,11 @@ class AddressModel {
     String? addressLine2,
     String? city,
     String? state,
-    String? postalCode,
+    String? pincode,
     String? landmark,
     bool? isDefault,
-    String? addressType,
-    GeoPoint? location,
+    String? label,
+    String? country,
     String? addressText,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -106,11 +116,11 @@ class AddressModel {
       addressLine2: addressLine2 ?? this.addressLine2,
       city: city ?? this.city,
       state: state ?? this.state,
-      postalCode: postalCode ?? this.postalCode,
+      pincode: pincode ?? this.pincode,
       landmark: landmark ?? this.landmark,
       isDefault: isDefault ?? this.isDefault,
-      addressType: addressType ?? this.addressType,
-      location: location ?? this.location,
+      label: label ?? this.label,
+      country: country ?? this.country,
       addressText: addressText ?? this.addressText,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -122,7 +132,7 @@ class AddressModel {
     if (addressLine2 != null && addressLine2!.isNotEmpty) {
       address += ', $addressLine2';
     }
-    address += ', $city, $state - $postalCode';
+    address += ', $city, $state - $pincode';
     if (landmark != null && landmark!.isNotEmpty) {
       address += ' (Near $landmark)';
     }

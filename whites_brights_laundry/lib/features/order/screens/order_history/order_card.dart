@@ -24,7 +24,7 @@ class OrderCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
         side: BorderSide(
-          color: OrderModel.getStatusColor(order.status).withOpacity(0.3),
+          color: Colors.blue.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -36,22 +36,22 @@ class OrderCard extends StatelessWidget {
             // Status header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: OrderModel.getStatusColor(order.status).withOpacity(0.1),
+              color: Colors.blue.withOpacity(0.1),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
                       Icon(
-                        _getStatusIcon(order.status),
+                        _getStatusIcon(order.status.name),
                         size: 16,
-                        color: OrderModel.getStatusColor(order.status),
+                        color: Colors.blue,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        order.status,
+                        order.status.name,
                         style: TextStyle(
-                          color: OrderModel.getStatusColor(order.status),
+                          color: Colors.blue,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

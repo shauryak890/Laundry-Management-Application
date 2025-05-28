@@ -21,31 +21,37 @@ class UserModel {
     required this.updatedAt,
   }) : this.phone = phone ?? phoneNumber; // Use phoneNumber as phone if not provided
 
-  factory UserModel.fromMap(Map<String, dynamic> map) {
+  factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: map['id'] ?? '',
-      name: map['name'] ?? '',
-      phoneNumber: map['phoneNumber'] ?? '',
-      phone: map['phone'] ?? map['phoneNumber'] ?? '',
-      email: map['email'],
-      profileImageUrl: map['profileImageUrl'],
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      id: json['id'] ?? json['_id'] ?? '',
+      name: json['name'] ?? '',
+      phoneNumber: json['phoneNumber'] ?? '',
+      email: json['email'],
+      profileImageUrl: json['profileImageUrl'],
+      createdAt: json['createdAt'] != null 
+        ? DateTime.parse(json['createdAt']) 
+        : DateTime.now(),
+      updatedAt: json['updatedAt'] != null 
+        ? DateTime.parse(json['updatedAt']) 
+        : DateTime.now(),
     );
   }
 
-  Map<String, dynamic> toMap() {
+  // For backward compatibility
+  factory UserModel.fromMap(Map<String, dynamic> map) => UserModel.fromJson(map);
+
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'name': name,
       'phoneNumber': phoneNumber,
-      'phone': phone,
       'email': email,
       'profileImageUrl': profileImageUrl,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      // Don't include id, createdAt, updatedAt as they're managed by the server
     };
   }
+
+  // For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
 
   UserModel copyWith({
     String? id,

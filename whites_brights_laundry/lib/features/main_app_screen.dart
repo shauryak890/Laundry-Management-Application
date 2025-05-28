@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
-import '../services/providers/user_provider.dart';
+import '../services/providers/user_provider_mongodb.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'home/screens/home_screen.dart';
 import 'order/screens/order_history/order_history_screen.dart';

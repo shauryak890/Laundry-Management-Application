@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants.dart';
 import '../../../../models/order_model.dart';
-import '../../../../services/providers/order_provider_firebase.dart';
+import '../../../../services/providers/order_provider_mongodb.dart';
 import '../../../../widgets/buttons.dart';
 import 'status_timeline.dart';
 import 'rider_info_card.dart';
@@ -24,13 +23,32 @@ class OrderStatusScreen extends StatefulWidget {
 }
 
 class _OrderStatusScreenState extends State<OrderStatusScreen> {
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'scheduled':
+        return Colors.grey;
+      case 'pickedUp':
+        return Colors.orange;
+      case 'inProcess':
+        return Colors.blue;
+      case 'outForDelivery':
+        return Colors.amber;
+      case 'delivered':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Fetch order details
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Provider.of<OrderProviderFirebase>(context, listen: false)
+        Provider.of<OrderProvider>(context, listen: false)
             .getOrderById(widget.orderId);
       }
     });
@@ -38,7 +56,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<OrderProviderFirebase>(
+    return Consumer<OrderProvider>(
       builder: (context, orderProvider, _) {
         final order = orderProvider.selectedOrder;
         final isLoading = orderProvider.isLoading;
@@ -125,12 +143,12 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
           const SizedBox(height: 24),
           
           // Rider Information (if assigned)
-          if (order.riderId != null && order.riderName != null)
+          if (null != null && null != null)
             RiderInfoCard(
-              name: order.riderName!,
-              phone: order.riderPhone ?? 'Not available',
+              name: null!,
+              phone: 'Not available' ?? 'Not available',
             ),
-          if (order.riderId != null)
+          if (null != null)
             const SizedBox(height: 24),
           
           // Order Details
@@ -216,7 +234,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                         context,
                         entry.key,
                         '${dateFormat.format(entry.value)} at ${timeFormat.format(entry.value)}',
-                        isLast: entry.key == order.status,
+                        isLast: entry.key == order.status.name,
                       );
                     }).toList(),
                   ],
@@ -240,8 +258,8 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             Center(
               child: TextButton(
                 onPressed: () {
-                  Provider.of<OrderProviderFirebase>(context, listen: false)
-                      .simulateOrderProgress(order.id);
+                  Provider.of<OrderProvider>(context, listen: false);
+                      // simulateOrderProgress removed for MongoDB migration;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Order progress simulation started'),
@@ -258,7 +276,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
 
   Widget _buildStatusCard(OrderModel order) {
     return Card(
-      color: OrderModel.getStatusColor(order.status).withOpacity(0.1),
+      color: Colors.blue.withOpacity(0.1),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
@@ -267,17 +285,17 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: OrderModel.getStatusColor(order.status).withOpacity(0.2),
+                color: Colors.blue.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Icon(
-                  _getStatusIcon(order.status),
-                  color: OrderModel.getStatusColor(order.status),
+                  _getStatusIcon(order.status.name),
+                  color: Colors.blue,
                   size: 32,
                 ),
               ),
-            ).animate().scale(delay: 300.ms, duration: 600.ms),
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -291,10 +309,10 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    order.status,
+                    order.status.name,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: OrderModel.getStatusColor(order.status),
+                      color: Colors.blue,
                     ),
                   ),
                 ],
@@ -303,7 +321,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
           ],
         ),
       ),
-    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2, end: 0);
+    );
   }
 
   Widget _buildDetailRow(
@@ -366,7 +384,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               Icon(
                 _getStatusIcon(status),
                 size: 18,
-                color: OrderModel.getStatusColor(status),
+                color: _getStatusColor(status),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -436,7 +454,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             ),
             onPressed: () {
               Navigator.of(context).pop();
-              Provider.of<OrderProviderFirebase>(context, listen: false)
+              Provider.of<OrderProvider>(context, listen: false)
                   .updateOrderStatus(order.id, OrderStatus.cancelled);
             },
             child: const Text('Yes, Cancel Order'),

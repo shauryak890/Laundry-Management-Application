@@ -8,7 +8,7 @@ import 'package:whites_brights_laundry/models/rider_model.dart';
 import 'package:whites_brights_laundry/services/firebase/firebase_service.dart';
 import 'package:whites_brights_laundry/services/firebase/firestore_service_interface.dart';
 
-class FirestoreService implements FirestoreServiceInterface {
+
   final dynamic _firestore = FirebaseService.instance.firestore;
   final String? _userId = FirebaseService.instance.currentUserId;
   final _uuid = const Uuid();
@@ -207,7 +207,7 @@ class FirestoreService implements FirestoreServiceInterface {
       
       // Create status timestamps map
       final statusTimestamps = {
-        OrderStatus.scheduled: now,
+        'scheduled': now,
       };
 
       final order = OrderModel(
@@ -245,6 +245,7 @@ class FirestoreService implements FirestoreServiceInterface {
       return Stream.value([]);
     }
 
+    // Fetch all orders for the current user
     return _ordersRef
         .where('userId', isEqualTo: _userId)
         .orderBy('createdAt', descending: true)

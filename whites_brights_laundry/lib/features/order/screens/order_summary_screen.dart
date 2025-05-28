@@ -1,12 +1,28 @@
 import 'package:flutter/material.dart';
+import '../../../core/map_utils.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../core/constants.dart';
-import '../../../services/providers/order_provider.dart';
+import '../../../services/providers/order_provider_mongodb.dart';
+import '../../../services/providers/address_provider_mongodb.dart';
+import '../../../services/providers/service_provider.dart';
+import '../../../services/mongodb/order_service.dart';
+import '../../../models/address_model.dart';
 import '../../../widgets/buttons.dart';
 import '../widgets/summary_item.dart';
+import '../../../widgets/bottom_nav_bar.dart';
+
+Color? parseColor(dynamic colorValue) {
+  if (colorValue is int) return Color(colorValue);
+  if (colorValue is String) {
+    String hex = colorValue.replaceAll('#', '').replaceAll('0x', '');
+    if (hex.length == 6) hex = 'FF$hex'; // add alpha if missing
+    return Color(int.tryParse('0x$hex') ?? 0xFF000000);
+  }
+  return null;
+}
 
 class OrderSummaryScreen extends StatelessWidget {
   const OrderSummaryScreen({super.key});
@@ -14,8 +30,34 @@ class OrderSummaryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final orderProvider = Provider.of<OrderProvider>(context);
-    final service = orderProvider.selectedService;
+    final serviceProvider = Provider.of<ServiceProvider>(context, listen: false);
+    final serviceId = orderProvider.selectedService;
     
+    // Get the full service details from ServiceProvider using the ID
+    final service = serviceProvider.services.firstWhere(
+      (s) => s['id'].toString() == serviceId,
+      orElse: () => {
+        'id': 1,
+        'name': 'Wash & Fold',
+        'price': 199, // Updated price for Wash & Fold
+        'unit': 'kg',
+        'color': '#2196F3',
+      },
+    );
+    // Extract service fields safely
+    String serviceName = service['name'] ?? 'Wash & Fold';
+    String serviceUnit = service['unit'] ?? 'kg';
+    num servicePrice = service['price'] ?? 199; // Updated price for Wash & Fold
+    Color? serviceColor = parseColor(service['color']);
+    
+    // Ensure we have a default price if none is available
+    if (servicePrice <= 0) {
+      servicePrice = 199; // Updated default price
+    }
+    
+    // Calculate the total price based on quantity
+    final totalPrice = servicePrice * orderProvider.itemCount;
+
     if (service == null) {
       // Service not found, go back to home
       Future.microtask(() => context.go(AppRoutes.home));
@@ -27,6 +69,26 @@ class OrderSummaryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.orderSummary),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: 1, // Orders tab
+        onItemSelected: (index) {
+          // Handle navigation based on the selected index
+          switch (index) {
+            case 0: // Home
+              context.go(AppRoutes.home);
+              break;
+            case 1: // Orders - already here
+              break;
+            case 2: // Schedule
+              // Navigate to schedule with a default service
+              context.push(AppRoutes.schedule, extra: 1);
+              break;
+            case 3: // Profile
+              context.push(AppRoutes.profile);
+              break;
+          }
+        },
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -53,7 +115,7 @@ class OrderSummaryScreen extends StatelessWidget {
                       // Service Details
                       SummaryItem(
                         label: 'Service',
-                        value: service['name'],
+                        value: serviceName,
                         iconData: Icons.local_laundry_service,
                         onEdit: () => context.pop(),
                       ),
@@ -62,7 +124,7 @@ class OrderSummaryScreen extends StatelessWidget {
                       // Quantity
                       SummaryItem(
                         label: 'Quantity',
-                        value: '${orderProvider.itemCount} ${service['unit']}',
+                        value: '${orderProvider.itemCount} $serviceUnit',
                         iconData: Icons.shopping_bag,
                         onEdit: () => context.pop(),
                       ),
@@ -114,11 +176,22 @@ class OrderSummaryScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      SummaryItem(
-                        label: 'Address',
-                        value: orderProvider.selectedAddress,
-                        iconData: Icons.location_on,
-                        onEdit: () => context.push(AppRoutes.profile),
+                      Builder(
+                        builder: (context) {
+                          final addressProvider = Provider.of<AddressProvider>(context);
+                          final orderProvider = Provider.of<OrderProvider>(context);
+                          final selectedAddress = addressProvider.addresses.firstWhere(
+                            (a) => a.id == orderProvider.selectedAddress,
+                            orElse: () => AddressModel(id: '', userId: '', addressLine1: '', city: '', state: '', pincode: '', isDefault: false, label: 'home'),
+                          );
+                          if (selectedAddress.id.isEmpty) {
+                            return const Text('No address selected', style: TextStyle(color: Colors.red));
+                          }
+                          return Text(
+                            '${selectedAddress.addressLine1}, ${selectedAddress.city}, ${selectedAddress.state} - ${selectedAddress.pincode}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -145,7 +218,7 @@ class OrderSummaryScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '${service['name']} x ${orderProvider.itemCount}',
+                            '${serviceName} x ${orderProvider.itemCount}',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           Text(
@@ -169,7 +242,7 @@ class OrderSummaryScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '₹${orderProvider.totalPrice.toStringAsFixed(0)}',
+                            '₹${(servicePrice * orderProvider.itemCount).toStringAsFixed(0)}',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primaryBlue,
@@ -186,13 +259,70 @@ class OrderSummaryScreen extends StatelessWidget {
               // Place Order Button
               PrimaryButton(
                 text: AppStrings.placeOrder,
-                onPressed: () => _showOrderConfirmation(context),
+                onPressed: () {
+                // Save order to MongoDB before showing confirmation
+                _saveOrderToMongoDB(context);
+                _showOrderConfirmation(context);
+              },
               ),
             ],
           ),
         ),
       ),
     );
+  }
+  
+  // Save order to MongoDB
+  Future<void> _saveOrderToMongoDB(BuildContext context) async {
+    try {
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      final serviceProvider = Provider.of<ServiceProvider>(context, listen: false);
+      final addressProvider = Provider.of<AddressProvider>(context, listen: false);
+      
+      // Get service details
+      final serviceId = orderProvider.selectedService;
+      final service = serviceProvider.services.firstWhere(
+        (s) => s['id'].toString() == serviceId,
+        orElse: () => {'id': 1, 'name': 'Wash & Fold', 'price': 199, 'unit': 'kg'},
+      );
+      
+      // Get address details
+      final addressId = orderProvider.selectedAddress ?? '';
+      final address = addressProvider.addresses.firstWhere(
+        (a) => a.id == addressId,
+        orElse: () => AddressModel(id: '', userId: '', addressLine1: 'Default Address', city: '', state: '', pincode: '', isDefault: false, label: ''),
+      );
+      final addressText = '${address.addressLine1}, ${address.city}, ${address.state} - ${address.pincode}';
+      
+      // Parse dates
+      final pickupDate = orderProvider.pickupDate ?? DateTime.now().add(const Duration(days: 1));
+      final deliveryDate = orderProvider.deliveryDate ?? DateTime.now().add(const Duration(days: 2));
+      
+      // Calculate price
+      final servicePrice = (service['price'] as num).toDouble();
+      final totalPrice = servicePrice * orderProvider.itemCount;
+      
+      // Call the order service to save the order with named parameters
+      // Create order with status set to 'scheduled' so it appears in order history
+      await OrderService().createOrder(
+        serviceId: serviceId.toString(),
+        serviceName: service['name'].toString(),
+        servicePrice: servicePrice,
+        serviceUnit: service['unit'].toString(),
+        quantity: orderProvider.itemCount,
+        totalPrice: totalPrice,
+        pickupDate: pickupDate,
+        deliveryDate: deliveryDate,
+        timeSlot: orderProvider.timeSlot,
+        addressId: addressId,
+        addressText: addressText,
+        status: 'scheduled', // Use 'scheduled' which is a valid OrderStatus value
+      );
+      
+      debugPrint('Order saved to MongoDB successfully');
+    } catch (e) {
+      debugPrint('Error saving order to MongoDB: $e');
+    }
   }
   
   void _showOrderConfirmation(BuildContext context) {
@@ -203,18 +333,11 @@ class OrderSummaryScreen extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Lottie.asset(
-              AppAssets.successAnimation,
-              width: 150,
-              height: 150,
-              repeat: true,
-              // Using a placeholder since we don't have the actual animation file
-              // In a real app, we would use a proper animation
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.check_circle,
-                color: AppColors.successGreen,
-                size: 80,
-              ),
+            // Success icon instead of animation to avoid asset errors
+            const Icon(
+              Icons.check_circle,
+              color: AppColors.successGreen,
+              size: 80,
             ),
             const SizedBox(height: 16),
             const Text(

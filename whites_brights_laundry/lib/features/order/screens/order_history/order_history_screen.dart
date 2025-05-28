@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants.dart';
 import '../../../../models/order_model.dart';
-import '../../../../services/providers/order_provider_firebase.dart';
+import '../../../../services/providers/order_provider_mongodb.dart';
 import 'order_card.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
@@ -29,7 +28,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
     // Initialize order data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Provider.of<OrderProviderFirebase>(context, listen: false).initOrderData();
+        Provider.of<OrderProvider>(context, listen: false).refreshOrders();
       }
     });
   }
@@ -56,11 +55,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
           unselectedLabelColor: AppColors.textLight,
         ),
       ),
-      body: Consumer<OrderProviderFirebase>(
+      body: Consumer<OrderProvider>(
         builder: (context, orderProvider, _) {
           final isLoading = orderProvider.isLoading;
-          final activeOrders = orderProvider.activeOrders;
-          final completedOrders = orderProvider.completedOrders;
+          
+          // Filter active orders - include all orders that are not delivered or cancelled
+          final activeOrders = orderProvider.orders.where((o) => 
+            o.status == OrderStatus.scheduled || 
+            o.status == OrderStatus.pickedUp || 
+            o.status == OrderStatus.inProcess || 
+            o.status == OrderStatus.outForDelivery
+          ).toList();
+          
+          // Filter completed orders - only include delivered orders
+          final completedOrders = orderProvider.orders.where((o) => 
+            o.status == OrderStatus.delivered
+          ).toList();
           
           return TabBarView(
             controller: _tabController,
@@ -138,7 +148,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         return OrderCard(
           order: order,
           onTap: () => _navigateToOrderDetails(order.id),
-        ).animate(delay: (index * 100).ms).fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0);
+        );
       },
     );
   }

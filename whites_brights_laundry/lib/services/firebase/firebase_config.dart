@@ -19,9 +19,7 @@ class FirebaseConfig {
   bool get shouldUseMockServices {
     // Always use mock services on unsupported platforms
     if (!isFirebaseSupported) return true;
-    
-    // For supported platforms, this can be toggled for development
-    // Set to true for development, false for production
-    return true;
+    // For supported platforms, use real Firebase (no mocks) by default
+    return false;
   }
 }

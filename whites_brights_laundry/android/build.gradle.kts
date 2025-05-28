@@ -1,11 +1,17 @@
-allprojects {
+buildscript {
     repositories {
         google()
         mavenCentral()
     }
-    plugins {
-        // Add the Google services Gradle plugin for Firebase
-        id("com.google.gms.google-services") version "4.4.2" apply false
+    dependencies {
+        classpath("com.google.gms:google-services:4.4.2")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
     }
 }
 
