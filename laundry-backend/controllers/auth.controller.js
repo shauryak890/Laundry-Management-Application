@@ -130,6 +130,7 @@ const sendTokenResponse = (user, statusCode, res) => {
         email: user.email,
         phoneNumber: user.phoneNumber,
         profileImageUrl: user.profileImageUrl,
+        role: user.role, // Include the user's role
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }

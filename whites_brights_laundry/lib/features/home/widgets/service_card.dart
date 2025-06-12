@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants.dart';
 
 class ServiceCard extends StatelessWidget {
-  final int id;
+  final String id;
   final String name;
   final IconData icon;
   final double price;

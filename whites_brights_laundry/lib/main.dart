@@ -16,6 +16,17 @@ import 'features/order/screens/order_tracking/order_status_screen.dart';
 import 'features/order/screens/order_history/order_history_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
 
+// Admin Panel screens
+import 'features/admin/screens/admin_login_screen.dart';
+import 'features/admin/screens/admin_dashboard_screen.dart';
+import 'features/admin/screens/user_management_screen.dart';
+import 'features/admin/screens/user_detail_screen.dart';
+import 'features/admin/screens/order_management_screen.dart';
+import 'features/admin/screens/order_detail_screen.dart';
+import 'features/admin/screens/service_management_screen.dart';
+import 'features/admin/screens/notifications_screen.dart';
+import 'features/admin/screens/admin_logs_screen.dart';
+
 // Providers
 // Providers (use MongoDB-backed implementations)
 import 'services/providers/user_provider_mongodb.dart';
@@ -23,6 +34,7 @@ import 'services/providers/order_provider_mongodb.dart';
 import 'services/providers/address_provider_mongodb.dart';
 import 'services/providers/service_provider.dart';
 import 'services/providers/auth_provider.dart';
+import 'features/admin/providers/admin_provider.dart';
 
 
 // Services
@@ -60,12 +72,22 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AddressProvider()), // from address_provider_mongodb.dart
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
       ],
-      child: MaterialApp.router(
-        title: AppStrings.appName,
-        theme: AppTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        routerConfig: _router,
+      child: Builder(
+        builder: (context) {
+          // Fetch services when the app starts (only once)
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Provider.of<ServiceProvider>(context, listen: false).fetchServices();
+          });
+          
+          return MaterialApp.router(
+            title: AppStrings.appName,
+            theme: AppTheme.lightTheme,
+            debugShowCheckedModeBanner: false,
+            routerConfig: _router,
+          );
+        },
       ),
     );
   }
@@ -101,7 +123,7 @@ final _router = GoRouter(
     GoRoute(
       path: AppRoutes.schedule,
       builder: (context, state) {
-        final serviceId = state.extra as int? ?? 0;
+        final serviceId = state.extra as String? ?? '1';
         return ScheduleScreen(serviceId: serviceId);
       },
     ),
@@ -125,6 +147,44 @@ final _router = GoRouter(
     GoRoute(
       path: '/order-history',
       builder: (context, state) => const OrderHistoryScreen(),
+    ),
+    
+    // Admin panel routes
+    GoRoute(
+      path: '/admin-login',
+      builder: (context, state) => const AdminLoginScreen(),
+    ),
+    GoRoute(
+      path: '/admin-dashboard',
+      builder: (context, state) => const AdminDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/admin-users',
+      builder: (context, state) => const UserManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin-user-detail',
+      builder: (context, state) => const UserDetailScreen(),
+    ),
+    GoRoute(
+      path: '/admin-orders',
+      builder: (context, state) => const OrderManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin-order-detail',
+      builder: (context, state) => const OrderDetailScreen(),
+    ),
+    GoRoute(
+      path: '/admin-services',
+      builder: (context, state) => const ServiceManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin-notifications',
+      builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/admin-logs',
+      builder: (context, state) => const AdminLogsScreen(),
     ),
   ],
   // Disable auth redirects for development

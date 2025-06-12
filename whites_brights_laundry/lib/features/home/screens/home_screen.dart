@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
+import '../../../models/service_model.dart';
 import '../../../services/providers/auth_provider.dart';
 import '../../../services/providers/order_provider_mongodb.dart';
+import '../../../services/providers/service_provider.dart';
 import '../../../widgets/bottom_nav_bar.dart';
 import '../widgets/service_card.dart';
 
@@ -15,6 +17,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final serviceProvider = Provider.of<ServiceProvider>(context);
     
     return Scaffold(
       appBar: AppBar(
@@ -92,37 +95,49 @@ class HomeScreen extends StatelessWidget {
                   // Services grid
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: AppSizes.pagePadding),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.9,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final service = ServiceData.services[index];
-                          return ServiceCard(
-                            id: service['id'],
-                            name: service['name'],
-                            icon: Icons.local_laundry_service, // Using a placeholder icon
-                            price: service['price'],
-                            unit: service['unit'],
-                            color: service['color'],
-                            onTap: () {
-                              // Instead of directly navigating, use Future.microtask to separate state update from navigation
-                              Future.microtask(() {
-                                // Set the selected service in the provider
-                                orderProvider.setSelectedService(service['id']);
-                                // Navigate to schedule screen with only the service ID
-                                context.push(AppRoutes.schedule, extra: service['id']);
-                              });
-                            },
-                          );
-                        },
-                        childCount: ServiceData.services.length,
-                      ),
-                    ),
+                    sliver: serviceProvider.isLoading
+                      ? const SliverFillRemaining(
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      : serviceProvider.services.isEmpty
+                        ? const SliverFillRemaining(
+                            child: Center(
+                              child: Text('No services available'),
+                            ),
+                          )
+                        : SliverGrid(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.9,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final service = serviceProvider.services[index];
+                                return ServiceCard(
+                                  id: service.id,
+                                  name: service.name,
+                                  icon: Icons.local_laundry_service, // Using a placeholder icon
+                                  price: service.price,
+                                  unit: service.unit,
+                                  color: service.color,
+                                  onTap: () {
+                                    // Instead of directly navigating, use Future.microtask to separate state update from navigation
+                                    Future.microtask(() {
+                                      // Set the selected service in the provider
+                                      orderProvider.setSelectedService(service.id);
+                                      // Navigate to schedule screen with only the service ID
+                                      context.push(AppRoutes.schedule, extra: service.id);
+                                    });
+                                  },
+                                );
+                              },
+                              childCount: serviceProvider.services.length,
+                            ),
+                          ),
                   ),
                   
                   // Bottom padding

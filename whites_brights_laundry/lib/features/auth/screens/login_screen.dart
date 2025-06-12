@@ -33,10 +33,25 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
+    debugPrint('Login attempt with email: $email');
     // For now, we'll call a simpler login method instead of phone verification
-    final success = await authProvider.loginWithEmailPassword(email, password);
-    if (success && mounted) {
-      context.go(AppRoutes.home);
+    final result = await authProvider.loginWithEmailPassword(email, password);
+    
+    debugPrint('Login result: $result');
+    debugPrint('Is admin? ${authProvider.isAdmin}');
+    debugPrint('User role: ${authProvider.userRole}');
+    
+    if (result['success'] == true && mounted) {
+      // Check if user is admin and redirect accordingly
+      if (authProvider.isAdmin) {
+        debugPrint('Redirecting to admin dashboard');
+        // Redirect to admin dashboard
+        context.go(AppRoutes.adminDashboard);
+      } else {
+        debugPrint('Redirecting to user home');
+        // Redirect to regular user home
+        context.go(AppRoutes.home);
+      }
     }
   }
 
@@ -198,6 +213,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         child: Text(
                           'Sign Up',
+                          style: TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Admin Login Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Are you an admin? ",
+                        style: TextStyle(color: AppColors.textLight),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          context.go(AppRoutes.adminLogin);
+                        },
+                        child: Text(
+                          'Admin Login',
                           style: TextStyle(
                             color: AppColors.primaryBlue,
                             fontWeight: FontWeight.bold,

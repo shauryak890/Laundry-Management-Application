@@ -7,6 +7,7 @@ class UserModel {
   final String phone; // Added for compatibility with profile_screen.dart
   final String? email;
   final String? profileImageUrl;
+  final String role; // Role for access control (user or admin)
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -17,6 +18,7 @@ class UserModel {
     String? phone,
     this.email,
     this.profileImageUrl,
+    this.role = 'user', // Default role is 'user'
     required this.createdAt,
     required this.updatedAt,
   }) : this.phone = phone ?? phoneNumber; // Use phoneNumber as phone if not provided
@@ -28,6 +30,7 @@ class UserModel {
       phoneNumber: json['phoneNumber'] ?? '',
       email: json['email'],
       profileImageUrl: json['profileImageUrl'],
+      role: json['role'] ?? 'user',
       createdAt: json['createdAt'] != null 
         ? DateTime.parse(json['createdAt']) 
         : DateTime.now(),
@@ -46,6 +49,7 @@ class UserModel {
       'phoneNumber': phoneNumber,
       'email': email,
       'profileImageUrl': profileImageUrl,
+      'role': role,
       // Don't include id, createdAt, updatedAt as they're managed by the server
     };
   }
@@ -59,6 +63,7 @@ class UserModel {
     String? phoneNumber,
     String? email,
     String? profileImageUrl,
+    String? role,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -68,6 +73,7 @@ class UserModel {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       email: email ?? this.email,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

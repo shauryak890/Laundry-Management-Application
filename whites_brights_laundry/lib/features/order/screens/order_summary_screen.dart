@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../core/constants.dart';
+import '../../../models/service_model.dart';
 import '../../../services/providers/order_provider_mongodb.dart';
 import '../../../services/providers/address_provider_mongodb.dart';
 import '../../../services/providers/service_provider.dart';
@@ -35,20 +36,24 @@ class OrderSummaryScreen extends StatelessWidget {
     
     // Get the full service details from ServiceProvider using the ID
     final service = serviceProvider.services.firstWhere(
-      (s) => s['id'].toString() == serviceId,
-      orElse: () => {
-        'id': 1,
-        'name': 'Wash & Fold',
-        'price': 199, // Updated price for Wash & Fold
-        'unit': 'kg',
-        'color': '#2196F3',
-      },
+      (s) => s.id == serviceId,
+      orElse: () => ServiceModel(
+        id: serviceId ?? '1',
+        name: 'Wash & Fold',
+        description: '',
+        price: 199.0,
+        unit: 'kg',
+        iconUrl: '',
+        color: Colors.blue,
+        isAvailable: true,
+        estimatedTimeHours: 24,
+      ),
     );
     // Extract service fields safely
-    String serviceName = service['name'] ?? 'Wash & Fold';
-    String serviceUnit = service['unit'] ?? 'kg';
-    num servicePrice = service['price'] ?? 199; // Updated price for Wash & Fold
-    Color? serviceColor = parseColor(service['color']);
+    String serviceName = service.name;
+    String serviceUnit = service.unit;
+    double servicePrice = service.price;
+    Color serviceColor = service.color;
     
     // Ensure we have a default price if none is available
     if (servicePrice <= 0) {
@@ -282,8 +287,18 @@ class OrderSummaryScreen extends StatelessWidget {
       // Get service details
       final serviceId = orderProvider.selectedService;
       final service = serviceProvider.services.firstWhere(
-        (s) => s['id'].toString() == serviceId,
-        orElse: () => {'id': 1, 'name': 'Wash & Fold', 'price': 199, 'unit': 'kg'},
+        (s) => s.id == serviceId,
+        orElse: () => ServiceModel(
+          id: serviceId ?? '1',
+          name: 'Wash & Fold',
+          description: '',
+          price: 199.0,
+          unit: 'kg',
+          iconUrl: '',
+          color: Colors.blue,
+          isAvailable: true,
+          estimatedTimeHours: 24,
+        ),
       );
       
       // Get address details
@@ -298,17 +313,15 @@ class OrderSummaryScreen extends StatelessWidget {
       final pickupDate = orderProvider.pickupDate ?? DateTime.now().add(const Duration(days: 1));
       final deliveryDate = orderProvider.deliveryDate ?? DateTime.now().add(const Duration(days: 2));
       
-      // Calculate price
-      final servicePrice = (service['price'] as num).toDouble();
-      final totalPrice = servicePrice * orderProvider.itemCount;
-      
+      // Calculate total price
+      final totalPrice = service.price * orderProvider.itemCount;
+
       // Call the order service to save the order with named parameters
-      // Create order with status set to 'scheduled' so it appears in order history
       await OrderService().createOrder(
         serviceId: serviceId.toString(),
-        serviceName: service['name'].toString(),
-        servicePrice: servicePrice,
-        serviceUnit: service['unit'].toString(),
+        serviceName: service.name,
+        servicePrice: service.price,
+        serviceUnit: service.unit,
         quantity: orderProvider.itemCount,
         totalPrice: totalPrice,
         pickupDate: pickupDate,

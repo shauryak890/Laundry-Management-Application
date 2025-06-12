@@ -69,7 +69,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
           const OrderHistoryScreen(),
           
           // Schedule Screen (for adding new orders)
-          const ScheduleScreen(serviceId: 1), // Default to first service
+          const ScheduleScreen(serviceId: '1'), // Default to first service
           
           // Profile Screen
           const ProfileScreen(),

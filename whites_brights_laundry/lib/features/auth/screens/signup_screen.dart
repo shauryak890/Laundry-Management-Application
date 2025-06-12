@@ -42,14 +42,14 @@ class _SignupScreenState extends State<SignupScreen> {
     
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await authProvider.registerWithEmailPassword(
+    final result = await authProvider.registerWithEmailPassword(
       name, 
       email, 
       phone,
       password
     );
     
-    if (success && mounted) {
+    if (result['success'] == true && mounted) {
       context.go(AppRoutes.home);
     }
   }

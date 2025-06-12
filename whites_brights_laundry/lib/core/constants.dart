@@ -63,6 +63,10 @@ class AppRoutes {
   static const schedule = '/schedule';
   static const orderSummary = '/order-summary';
   static const profile = '/profile';
+  
+  // Admin routes
+  static const adminLogin = '/admin-login';
+  static const adminDashboard = '/admin-dashboard';
 }
 
 // Sample data for services

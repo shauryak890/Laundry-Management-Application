@@ -115,10 +115,22 @@ class ApiService {
   dynamic _processResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return {};
-      return jsonDecode(response.body);
+      
+      try {
+        return jsonDecode(response.body);
+      } catch (e) {
+        debugPrint('Error decoding JSON response: $e');
+        debugPrint('Response body: ${response.body.substring(0, response.body.length > 100 ? 100 : response.body.length)}...');
+        throw Exception('Invalid response format: ${e.toString()}');
+      }
     } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['error'] ?? 'Unknown error occurred');
+      try {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? error['message'] ?? 'Server Error');
+      } catch (e) {
+        debugPrint('Error decoding error response: $e');
+        throw Exception('Server Error: Status ${response.statusCode}');
+      }
     }
   }
 

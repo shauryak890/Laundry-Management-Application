@@ -31,12 +31,16 @@ const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const orderRoutes = require('./routes/order.routes');
 const addressRoutes = require('./routes/address.routes');
+const adminRoutes = require('./routes/admin.routes');
+const serviceRoutes = require('./routes/service.routes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/services', serviceRoutes);
 
 // Root route
 app.get('/', (req, res) => {

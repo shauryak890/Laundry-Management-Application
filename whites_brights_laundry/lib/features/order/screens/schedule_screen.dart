@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/map_utils.dart';
+import '../../../models/service_model.dart';
 import '../../../services/providers/order_provider_mongodb.dart';
 import '../../../services/providers/address_provider_mongodb.dart';
 import '../../../models/address_model.dart';
@@ -25,7 +26,7 @@ Color? parseColor(dynamic colorValue) {
 }
 
 class ScheduleScreen extends StatefulWidget {
-  final int serviceId;
+  final String serviceId;
 
   const ScheduleScreen({
     super.key,
@@ -55,12 +56,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       // Ensure we have the correct service selected
       final serviceProvider = Provider.of<ServiceProvider>(context, listen: false);
       final service = serviceProvider.services.firstWhere(
-        (s) => s['id'] == widget.serviceId,
-        orElse: () => <String, dynamic>{},
+        (s) => s.id == widget.serviceId,
+        orElse: () => ServiceModel(
+          id: widget.serviceId,
+          name: 'Default Service',
+          description: '',
+          price: 199.0,
+          unit: 'kg',
+          iconUrl: '',
+          color: Colors.blue,
+          isAvailable: true,
+          estimatedTimeHours: 24,
+        ),
       );
-      if (service.isNotEmpty) {
-        orderProvider.setSelectedService(service['id']);
-      }
+      orderProvider.setSelectedService(service.id);
       
       // Fetch addresses from AddressProvider
       final addressProvider = Provider.of<AddressProvider>(context, listen: false);
@@ -180,25 +189,29 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     
     // Get the full service details from ServiceProvider
     final service = serviceProvider.services.firstWhere(
-      (s) => s['id'].toString() == serviceId,
-      orElse: () => {
-        'id': 1,
-        'name': 'Wash & Fold',
-        'price': 199, // Updated price for Wash & Fold
-        'unit': 'kg',
-        'color': '#2196F3',
-      },
+      (s) => s.id == serviceId,
+      orElse: () => ServiceModel(
+        id: serviceId ?? '1',
+        name: 'Wash & Fold',
+        description: '',
+        price: 199.0,
+        unit: 'kg',
+        iconUrl: '',
+        color: Colors.blue,
+        isAvailable: true,
+        estimatedTimeHours: 24,
+      ),
     );
     
     // Extract service fields safely
-    String serviceName = service['name'] ?? 'Wash & Fold';
-    String serviceUnit = service['unit'] ?? 'kg';
-    num servicePrice = service['price'] ?? 199; // Updated price for Wash & Fold
-    Color? serviceColor = parseColor(service['color']);
+    String serviceName = service.name;
+    String serviceUnit = service.unit;
+    double servicePrice = service.price;
+    Color serviceColor = service.color;
     
     // Ensure we have a default price if none is available
     if (servicePrice <= 0) {
-      servicePrice = 199; // Updated default price
+      servicePrice = 199.0; // Updated default price
     }
 
     return Scaffold(

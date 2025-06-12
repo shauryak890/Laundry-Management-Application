@@ -1,38 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../models/service_model.dart';
+import '../mongodb/api_service.dart';
+
 class ServiceProvider extends ChangeNotifier {
-  // List of services with updated prices
-  final List<Map<String, dynamic>> _services = [
-    {
-      'id': 1,
-      'name': 'Wash & Fold',
-      'unit': 'kg',
-      'price': 199,
-      'color': '#2196F3',
-    },
-    {
-      'id': 2,
-      'name': 'Dry Clean',
-      'unit': 'piece',
-      'price': 349,
-      'color': '#FFC107',
-    },
-    {
-      'id': 3,
-      'name': 'Ironing',
-      'unit': 'item',
-      'price': 99,
-      'color': '#4CAF50',
-    },
-    {
-      'id': 4,
-      'name': 'Premium Wash',
-      'unit': 'kg',
-      'price': 499,
-      'color': '#9C27B0',
-    },
-  ];
-  List<Map<String, dynamic>> get services => _services;
+  // API service for making HTTP requests
+  final ApiService _apiService = ApiService();
+  
+  // List of services from MongoDB
+  final List<ServiceModel> _services = [];
+  List<ServiceModel> get services => _services;
 
   // Basic state variables
   bool _isLoading = false;
@@ -49,6 +26,51 @@ class ServiceProvider extends ChangeNotifier {
       _error = null;
     }
     notifyListeners();
+  }
+  
+  // Fetch services from MongoDB
+  Future<void> fetchServices() async {
+    _setLoading(true);
+    
+    try {
+      debugPrint('Fetching services from MongoDB...');
+      final response = await _apiService.get('/services');
+      debugPrint('Services response: $response');
+      
+      final List<ServiceModel> fetchedServices = [];
+      if (response['data'] != null && response['data'] is List) {
+        for (var serviceData in response['data']) {
+          try {
+            fetchedServices.add(ServiceModel.fromMap(serviceData));
+          } catch (e) {
+            debugPrint('Error parsing service: $e');
+            debugPrint('Service data: $serviceData');
+          }
+        }
+        
+        _services.clear();
+        _services.addAll(fetchedServices);
+        debugPrint('Fetched ${_services.length} services successfully');
+      } else {
+        _error = 'Invalid response format';
+        debugPrint('Invalid response format: ${response['data']}');
+      }
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error fetching services: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // Get service by ID
+  ServiceModel? getServiceById(String id) {
+    try {
+      return _services.firstWhere((service) => service.id == id);
+    } catch (e) {
+      debugPrint('Service with ID $id not found');
+      return null;
+    }
   }
 
   void _setError(String error) {
