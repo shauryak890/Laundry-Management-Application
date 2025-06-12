@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:whites_brights_laundry/utils/colors.dart';
+import 'package:whites_brights_laundry/constants/colors.dart';
 
 class SearchFilterBar extends StatelessWidget {
   final String? searchTerm;
   final Map<String, String>? filters;
   final VoidCallback onClear;
+  final Function(String)? onSearchChanged;
+  final Function(String)? onFilterChanged;
+  final String? status;
 
   const SearchFilterBar({
     Key? key,
     this.searchTerm,
     this.filters,
     required this.onClear,
+    this.onSearchChanged,
+    this.onFilterChanged,
+    this.status,
   }) : super(key: key);
 
   @override
@@ -18,7 +24,7 @@ class SearchFilterBar extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: GlobalColors.primaryColor.withOpacity(0.1),
+      color: AppColors.primaryColor.withOpacity(0.1),
       child: Row(
         children: [
           const Text(
@@ -37,7 +43,7 @@ class SearchFilterBar extends StatelessWidget {
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(color: GlobalColors.primaryColor),
+                      side: BorderSide(color: AppColors.primaryColor),
                     ),
                   ),
                 if (filters != null)
@@ -47,7 +53,7 @@ class SearchFilterBar extends StatelessWidget {
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(color: GlobalColors.primaryColor),
+                        side: BorderSide(color: AppColors.primaryColor),
                       ),
                     ),
                   ),

@@ -26,6 +26,10 @@ import 'features/admin/screens/order_detail_screen.dart';
 import 'features/admin/screens/service_management_screen.dart';
 import 'features/admin/screens/notifications_screen.dart';
 import 'features/admin/screens/admin_logs_screen.dart';
+import 'features/admin/screens/rider_management_screen.dart';
+import 'features/admin/screens/rider_detail_screen.dart';
+import 'features/admin/screens/order_assign_rider_screen.dart';
+import 'features/admin/screens/rider_analytics_screen.dart';
 
 // Providers
 // Providers (use MongoDB-backed implementations)
@@ -185,6 +189,28 @@ final _router = GoRouter(
     GoRoute(
       path: '/admin-logs',
       builder: (context, state) => const AdminLogsScreen(),
+    ),
+    GoRoute(
+      path: '/admin-riders',
+      builder: (context, state) => const RiderManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin-rider-detail/:riderId',
+      builder: (context, state) {
+        final riderId = state.pathParameters['riderId'] ?? '';
+        return RiderDetailScreen(riderId: riderId);
+      },
+    ),
+    GoRoute(
+      path: '/admin-order-assign-rider/:orderId',
+      builder: (context, state) {
+        final orderId = state.pathParameters['orderId'] ?? '';
+        return OrderAssignRiderScreen(orderId: orderId);
+      },
+    ),
+    GoRoute(
+      path: '/admin-rider-analytics',
+      builder: (context, state) => const RiderAnalyticsScreen(),
     ),
   ],
   // Disable auth redirects for development

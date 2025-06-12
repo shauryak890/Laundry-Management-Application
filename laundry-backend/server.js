@@ -33,6 +33,7 @@ const orderRoutes = require('./routes/order.routes');
 const addressRoutes = require('./routes/address.routes');
 const adminRoutes = require('./routes/admin.routes');
 const serviceRoutes = require('./routes/service.routes');
+const riderRoutes = require('./routes/rider.routes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -41,6 +42,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/riders', riderRoutes);
 
 // Root route
 app.get('/', (req, res) => {

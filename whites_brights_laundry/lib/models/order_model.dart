@@ -13,6 +13,7 @@ enum OrderStatus {
 class OrderModel {
   final String id;
   final String userId;
+  final String? userName; // Added userName field
   final String serviceId;
   final String serviceName;
   final double servicePrice;
@@ -32,6 +33,7 @@ class OrderModel {
   OrderModel({
     required this.id,
     required this.userId,
+    this.userName, // Added userName parameter
     required this.serviceId,
     required this.serviceName,
     required this.servicePrice,
@@ -53,6 +55,7 @@ class OrderModel {
     return OrderModel(
       id: json['id'] ?? json['_id'] ?? '',
       userId: json['userId'] ?? '',
+      userName: json['userName'] ?? json['user']?['name'], // Added userName field
       serviceId: json['serviceId'] ?? '',
       serviceName: json['serviceName'] ?? '',
       servicePrice: (json['servicePrice'] is int) 
@@ -134,6 +137,7 @@ class OrderModel {
     return {
       'serviceId': serviceId,
       'serviceName': serviceName,
+      'userName': userName,
       'servicePrice': servicePrice,
       'serviceUnit': serviceUnit,
       'quantity': quantity,
@@ -174,6 +178,7 @@ class OrderModel {
   OrderModel copyWith({
     String? id,
     String? userId,
+    String? userName,
     String? serviceId,
     String? serviceName,
     double? servicePrice,
@@ -193,6 +198,7 @@ class OrderModel {
     return OrderModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
       serviceId: serviceId ?? this.serviceId,
       serviceName: serviceName ?? this.serviceName,
       servicePrice: servicePrice ?? this.servicePrice,

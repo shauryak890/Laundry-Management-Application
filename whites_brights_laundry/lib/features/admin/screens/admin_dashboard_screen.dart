@@ -225,6 +225,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           label: 'Services',
                           onPressed: () => context.go('/admin-services'),
                         ),
+                        _buildActionButton(
+                          icon: Icons.delivery_dining,
+                          label: 'Riders',
+                          onPressed: () => context.go('/admin-riders'),
+                        ),
                       ],
                     ),
                   ],

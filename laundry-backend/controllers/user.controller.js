@@ -1,5 +1,33 @@
 const User = require('../models/user.model');
 
+// @desc    Get current user profile
+// @route   GET /api/users/me
+// @access  Private
+exports.getCurrentUser = async (req, res) => {
+  try {
+    // req.user is set by the auth middleware
+    const user = await User.findById(req.user.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    console.error('Error getting current user:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+};
+
 // @desc    Update user profile
 // @route   PUT /api/users/profile
 // @access  Private

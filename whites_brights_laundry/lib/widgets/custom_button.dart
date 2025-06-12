@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:whites_brights_laundry/utils/colors.dart';
+import 'package:whites_brights_laundry/constants/colors.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final VoidCallback? onTap;
   final bool isLoading;
   final bool isOutlined;
   final Color? backgroundColor;
@@ -16,7 +17,8 @@ class CustomButton extends StatelessWidget {
   const CustomButton({
     Key? key,
     required this.text,
-    required this.onPressed,
+    this.onPressed,
+    this.onTap,
     this.isLoading = false,
     this.isOutlined = false,
     this.backgroundColor,
@@ -25,7 +27,8 @@ class CustomButton extends StatelessWidget {
     this.height = 50,
     this.fontSize = 16,
     this.icon,
-  }) : super(key: key);
+  }) : assert(onPressed != null || onTap != null, 'Either onPressed or onTap must be provided'),
+       super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -35,20 +38,20 @@ class CustomButton extends StatelessWidget {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           foregroundColor: isOutlined 
-              ? backgroundColor ?? GlobalColors.primaryColor 
+              ? backgroundColor ?? AppColors.primaryColor 
               : textColor ?? Colors.white,
           backgroundColor: isOutlined 
               ? Colors.transparent 
-              : backgroundColor ?? GlobalColors.primaryColor,
+              : backgroundColor ?? AppColors.primaryColor,
           side: isOutlined
-              ? BorderSide(color: backgroundColor ?? GlobalColors.primaryColor)
+              ? BorderSide(color: backgroundColor ?? AppColors.primaryColor)
               : null,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        onPressed: isLoading ? null : onPressed,
+        onPressed: isLoading ? null : (onPressed ?? onTap),
         child: isLoading
             ? const SizedBox(
                 height: 24,

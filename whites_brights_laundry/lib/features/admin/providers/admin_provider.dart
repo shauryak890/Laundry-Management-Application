@@ -4,6 +4,7 @@ import 'package:whites_brights_laundry/models/admin_log_model.dart';
 import 'package:whites_brights_laundry/models/order_model.dart';
 import 'package:whites_brights_laundry/models/user_model.dart';
 import 'package:whites_brights_laundry/models/service_model.dart';
+import 'package:whites_brights_laundry/models/rider_model.dart';
 import 'package:whites_brights_laundry/services/mongodb/api_service.dart';
 
 class AdminProvider with ChangeNotifier {
@@ -44,6 +45,12 @@ class AdminProvider with ChangeNotifier {
   String? _notificationsError;
   int _totalNotifications = 0;
   
+  // Riders data
+  List<RiderModel> _riders = [];
+  bool _isLoadingRiders = false;
+  String? _ridersError;
+  int _totalRiders = 0;
+  
   // Getters
   AdminDashboardModel? get dashboardData => _dashboardData;
   bool get isLoadingDashboard => _isLoadingDashboard;
@@ -72,6 +79,11 @@ class AdminProvider with ChangeNotifier {
   bool get isLoadingNotifications => _isLoadingNotifications;
   String? get notificationsError => _notificationsError;
   int get totalNotifications => _totalNotifications;
+  
+  List<RiderModel> get riders => _riders;
+  bool get isLoadingRiders => _isLoadingRiders;
+  String? get ridersError => _ridersError;
+  int get totalRiders => _totalRiders;
   
   // Dashboard methods
   Future<void> fetchDashboardData() async {
@@ -405,5 +417,180 @@ class AdminProvider with ChangeNotifier {
       message: message,
       type: type,
     );
+  }
+  
+  // Rider management methods
+  Future<void> fetchRiders({
+    String? search,
+    bool? isAvailable,
+    int page = 1,
+    int limit = 10,
+  }) async {
+    _isLoadingRiders = true;
+    _ridersError = null;
+    notifyListeners();
+    
+    try {
+      String endpoint = '/admin/riders?page=$page&limit=$limit';
+      if (search != null && search.isNotEmpty) endpoint += '&search=$search';
+      if (isAvailable != null) endpoint += '&isAvailable=${isAvailable.toString()}';
+      
+      final response = await _apiService.get(endpoint);
+      
+      final List<RiderModel> riders = [];
+      for (var rider in response['data']) {
+        riders.add(RiderModel.fromMap(rider));
+      }
+      
+      _riders = riders;
+      _totalRiders = response['pagination']['total'] ?? 0;
+      _isLoadingRiders = false;
+      notifyListeners();
+    } catch (e) {
+      _ridersError = e.toString();
+      _isLoadingRiders = false;
+      notifyListeners();
+    }
+  }
+  
+  Future<RiderModel> getRiderById(String riderId) async {
+    try {
+      final response = await _apiService.get('/admin/riders/$riderId');
+      return RiderModel.fromMap(response['data']);
+    } catch (e) {
+      debugPrint('Get rider by ID error: $e');
+      throw e;
+    }
+  }
+  
+  Future<bool> createRider(Map<String, dynamic> riderData) async {
+    try {
+      await _apiService.post('/admin/riders', riderData);
+      await fetchRiders();
+      return true;
+    } catch (e) {
+      debugPrint('Create rider error: $e');
+      return false;
+    }
+  }
+  
+  Future<bool> updateRider(String riderId, Map<String, dynamic> riderData) async {
+    try {
+      await _apiService.put('/admin/riders/$riderId', riderData);
+      await fetchRiders();
+      return true;
+    } catch (e) {
+      debugPrint('Update rider error: $e');
+      return false;
+    }
+  }
+  
+  Future<bool> toggleRiderStatus(String riderId, bool isActive) async {
+    try {
+      await _apiService.put('/admin/riders/$riderId/status', {
+        'isActive': isActive,
+      });
+      
+      // Update local state
+      final riderIndex = _riders.indexWhere((rider) => rider.id == riderId);
+      if (riderIndex != -1) {
+        final updatedRider = _riders[riderIndex];
+        _riders[riderIndex] = RiderModel(
+          id: updatedRider.id,
+          name: updatedRider.name,
+          phone: updatedRider.phone,
+          email: updatedRider.email,
+          profileImageUrl: updatedRider.profileImageUrl,
+          isAvailable: updatedRider.isAvailable,
+          isActive: isActive,
+          completedOrders: updatedRider.completedOrders,
+          rating: updatedRider.rating,
+          createdAt: updatedRider.createdAt,
+          updatedAt: DateTime.now(),
+          location: updatedRider.location,
+          status: updatedRider.status,
+          assignedOrders: updatedRider.assignedOrders,
+        );
+        notifyListeners();
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Toggle rider status error: $e');
+      return false;
+    }
+  }
+  
+  Future<bool> updateRiderAvailability(String riderId, bool isAvailable) async {
+    try {
+      await _apiService.put('/admin/riders/$riderId/availability', {
+        'isAvailable': isAvailable,
+      });
+      
+      // Update local state
+      final riderIndex = _riders.indexWhere((rider) => rider.id == riderId);
+      if (riderIndex != -1) {
+        final updatedRider = _riders[riderIndex];
+        // Since RiderModel is immutable, we need to create a new instance
+        _riders[riderIndex] = RiderModel(
+          id: updatedRider.id,
+          name: updatedRider.name,
+          phone: updatedRider.phone,
+          email: updatedRider.email,
+          profileImageUrl: updatedRider.profileImageUrl,
+          isAvailable: isAvailable,
+          isActive: updatedRider.isActive,
+          completedOrders: updatedRider.completedOrders,
+          rating: updatedRider.rating,
+          createdAt: updatedRider.createdAt,
+          updatedAt: DateTime.now(),
+          location: updatedRider.location,
+          status: updatedRider.status,
+          assignedOrders: updatedRider.assignedOrders,
+        );
+        notifyListeners();
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Update rider availability error: $e');
+      return false;
+    }
+  }
+  
+  Future<List<OrderModel>> getRiderAssignedOrders(String riderId) async {
+    try {
+      final response = await _apiService.get('/admin/riders/$riderId/orders');
+      
+      final List<OrderModel> orders = [];
+      for (var order in response['data']) {
+        orders.add(OrderModel.fromJson(order));
+      }
+      
+      return orders;
+    } catch (e) {
+      debugPrint('Get rider assigned orders error: $e');
+      return [];
+    }
+  }
+  
+  Future<bool> assignRiderToOrder(String orderId, String riderId) async {
+    try {
+      await _apiService.put('/admin/orders/$orderId/assign', {
+        'riderId': riderId,
+      });
+      
+      // Update local order state
+      final orderIndex = _orders.indexWhere((order) => order.id == orderId);
+      if (orderIndex != -1) {
+        // Update the order status to 'assigned' or whatever is appropriate
+        _updateLocalOrderStatus(orderId, 'assigned');
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Assign rider to order error: $e');
+      return false;
+    }
   }
 }

@@ -36,6 +36,34 @@ const OrderSchema = new mongoose.Schema({
     enum: ['scheduled', 'pickedUp', 'inProcess', 'outForDelivery', 'delivered', 'cancelled'],
     default: 'scheduled'
   },
+  assignedRider: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Rider',
+    default: null
+  },
+  riderLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: [0, 0]
+    },
+    lastUpdated: {
+      type: Date,
+      default: null
+    }
+  },
+  isAssigned: {
+    type: Boolean,
+    default: false
+  },
+  assignedAt: {
+    type: Date,
+    default: null
+  },
   pickupDate: {
     type: Date,
     required: true
@@ -71,7 +99,7 @@ const OrderSchema = new mongoose.Schema({
   }
 });
 
-// Middleware to set updated time
+// Middleware to set updated time and handle rider assignment
 OrderSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   
@@ -80,7 +108,21 @@ OrderSchema.pre('save', function(next) {
     this.statusTimestamps.set(this.status, new Date());
   }
   
+  // Update isAssigned flag if rider is assigned or removed
+  if (this.isModified('assignedRider')) {
+    if (this.assignedRider) {
+      this.isAssigned = true;
+      this.assignedAt = new Date();
+    } else {
+      this.isAssigned = false;
+      this.assignedAt = null;
+    }
+  }
+  
   next();
 });
+
+// Create a 2dsphere index for location-based queries
+OrderSchema.index({ 'riderLocation.coordinates': '2dsphere' });
 
 module.exports = mongoose.model('Order', OrderSchema);

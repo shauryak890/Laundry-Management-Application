@@ -5,6 +5,14 @@ const User = require('../models/user.model');
 const Order = require('../models/order.model');
 const Service = require('../models/service.model');
 
+// Import rider controller functions
+const {
+  getRiders,
+  getRider,
+  createRider,
+  updateRiderStatus
+} = require('../controllers/rider.controller');
+
 // Get dashboard metrics
 router.get('/dashboard', adminProtect, async (req, res) => {
   try {
@@ -474,6 +482,159 @@ router.get('/orders/:id/invoice', adminProtect, async (req, res) => {
     });
   } catch (error) {
     console.error('Generate invoice error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+});
+
+// Rider management routes for admin dashboard
+router.get('/riders', adminProtect, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, isAvailable } = req.query;
+    
+    // Build query
+    let query = {};
+    
+    // Add availability filter if provided
+    if (isAvailable !== undefined) {
+      query.isAvailable = isAvailable === 'true';
+    }
+    
+    // Find users with rider role
+    const riders = await User.find({ role: 'rider', ...query })
+      .select('-password')
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+      
+    // Get total count for pagination
+    const total = await User.countDocuments({ role: 'rider', ...query });
+    
+    console.log(`Found ${riders.length} riders out of ${total} total`);
+    
+    res.status(200).json({
+      success: true,
+      count: riders.length,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / limit)
+      },
+      data: riders
+    });
+  } catch (error) {
+    console.error('Get all riders error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+});
+
+// Get single rider
+router.get('/riders/:id', adminProtect, async (req, res) => {
+  try {
+    const rider = await User.findOne({ _id: req.params.id, role: 'rider' }).select('-password');
+    
+    if (!rider) {
+      return res.status(404).json({
+        success: false,
+        error: 'Rider not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: rider
+    });
+  } catch (error) {
+    console.error('Get rider error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+});
+
+// Create rider
+router.post('/riders', adminProtect, async (req, res) => {
+  try {
+    const { name, email, phoneNumber, password } = req.body;
+    
+    // Check if rider with this email already exists
+    const existingRider = await User.findOne({ email });
+    
+    if (existingRider) {
+      return res.status(400).json({
+        success: false,
+        error: 'A user with this email already exists'
+      });
+    }
+    
+    // Create new rider
+    const rider = await User.create({
+      name,
+      email,
+      phoneNumber,
+      password,
+      role: 'rider',
+      isAvailable: true
+    });
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: rider._id,
+        name: rider.name,
+        email: rider.email,
+        phoneNumber: rider.phoneNumber,
+        role: rider.role,
+        isAvailable: rider.isAvailable,
+        createdAt: rider.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Create rider error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+});
+
+// Update rider status
+router.put('/riders/:id/status', adminProtect, async (req, res) => {
+  try {
+    const { isAvailable } = req.body;
+    
+    if (isAvailable === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide isAvailable status'
+      });
+    }
+    
+    const rider = await User.findOneAndUpdate(
+      { _id: req.params.id, role: 'rider' },
+      { isAvailable },
+      { new: true }
+    ).select('-password');
+    
+    if (!rider) {
+      return res.status(404).json({
+        success: false,
+        error: 'Rider not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: rider
+    });
+  } catch (error) {
+    console.error('Update rider status error:', error);
     res.status(500).json({
       success: false,
       error: 'Server Error'

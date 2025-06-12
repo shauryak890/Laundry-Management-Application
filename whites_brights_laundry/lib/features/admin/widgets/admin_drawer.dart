@@ -8,6 +8,7 @@ import 'package:whites_brights_laundry/features/admin/screens/notifications_scre
 import 'package:whites_brights_laundry/features/admin/screens/order_management_screen.dart';
 import 'package:whites_brights_laundry/features/admin/screens/service_management_screen.dart';
 import 'package:whites_brights_laundry/features/admin/screens/user_management_screen.dart';
+import 'package:whites_brights_laundry/features/admin/screens/rider_management_screen.dart';
 import 'package:whites_brights_laundry/services/providers/auth_provider.dart';
 import 'package:whites_brights_laundry/utils/colors.dart';
 
@@ -83,16 +84,30 @@ class AdminDrawer extends StatelessWidget {
           ),
           _buildDrawerItem(
             context,
+            icon: Icons.delivery_dining,
+            title: 'Riders',
+            index: 4,
+            route: '/admin-riders',
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.analytics,
+            title: 'Rider Analytics',
+            index: 5,
+            route: '/admin-rider-analytics',
+          ),
+          _buildDrawerItem(
+            context,
             icon: Icons.notifications,
             title: 'Notifications',
-            index: 4,
+            index: 6,
             route: '/admin-notifications',
           ),
           _buildDrawerItem(
             context,
             icon: Icons.history,
             title: 'Admin Logs',
-            index: 5,
+            index: 6,
             route: '/admin-logs',
           ),
           const Spacer(),

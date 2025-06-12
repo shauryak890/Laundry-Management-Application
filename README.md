@@ -1,19 +1,193 @@
-# Whites & Brights Laundry App
+# Whites & Brights Laundry Management System
 
-A modern Flutter 3 application for a laundry service targeting Android and iOS with Firebase integration.
+A comprehensive laundry management system with multi-role support (customers, riders, admins) built with Flutter and Node.js/Express backend with MongoDB integration.
+
+## System Architecture
+
+The system consists of three main components:
+
+1. **Backend API Server** (`laundry-backend`): Node.js/Express server with MongoDB database
+2. **Customer App** (`whites_brights_laundry`): Flutter app for customers to place orders
+3. **Rider App** (`whites_brights_rider`): Flutter app for delivery personnel
+4. **Admin Dashboard** (`whites_brights_admin`): Web-based dashboard for administrators
 
 ## Features
 
-- 📱 Phone authentication with Firebase Auth
-- 🔥 Firestore integration for dynamic data storage
-- 🏠 Home screen with grid layout of laundry services
+### Customer App
+- 🔐 User authentication and profile management
+- 🧺 Browse laundry services with pricing
 - 📅 Schedule pickup and delivery
+- 📍 Address management
+- 📊 Order history and status tracking
+- 💳 Payment integration
 - 📦 Order summary and confirmation
-- 📱 Push notifications with Firebase Cloud Messaging
-- 🚚 Live order tracking with status updates
+- 📱 Push notifications
+
+### Rider App
+- 🔐 Rider authentication and profile management
+- 📱 Update availability status (available, busy, offline)
+- 🚚 View and manage assigned orders
+- 📊 Order history and analytics
+- 📍 Real-time location tracking
+- 💰 Revenue tracking and performance metrics
+
+### Admin Dashboard
+- 🔐 Admin authentication and role-based access
+- 📊 Comprehensive analytics and reporting
+- 👥 User management (customers and riders)
+- 🧺 Service management
+- 📦 Order management and tracking
+- 🚚 Rider assignment and monitoring
+
+## Technology Stack
+
+### Backend
+- **Framework**: Node.js with Express.js
+- **Database**: MongoDB
+- **Authentication**: JWT (JSON Web Tokens)
+- **API**: RESTful API design
+- **Middleware**: Role-based access control
+
+### Frontend (Customer & Rider Apps)
+- **Framework**: Flutter (Dart)
+- **State Management**: Provider
+- **Navigation**: GoRouter
+- **HTTP Client**: Dio
+- **Location Services**: Geolocator
+
+### Admin Dashboard
+- **Framework**: Flutter Web
+- **State Management**: Provider
+- **Charts**: fl_chart
+- **Data Tables**: data_table_2
 - 📊 Order history with filtering
 - 👤 User profile management
 - 🧰 Clean, modern UI with Material 3 design
+
+## Setup Instructions
+
+### Backend Setup
+
+1. Navigate to the backend directory:
+   ```bash
+   cd laundry-backend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env` file with the following variables:
+   ```
+   PORT=5000
+   MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<dbname>?retryWrites=true&w=majority
+   JWT_SECRET=your_jwt_secret_key
+   JWT_EXPIRES_IN=30d
+   ```
+
+4. Start the server:
+   ```bash
+   npm start
+   ```
+   For development with auto-reload:
+   ```bash
+   npm run dev
+   ```
+
+### Customer App Setup
+
+1. Navigate to the customer app directory:
+   ```bash
+   cd whites_brights_laundry
+   ```
+
+2. Install Flutter dependencies:
+   ```bash
+   flutter pub get
+   ```
+
+3. Update the API base URL in `lib/services/api_service.dart`
+
+4. Run the app:
+   ```bash
+   flutter run
+   ```
+
+### Rider App Setup
+
+1. Navigate to the rider app directory:
+   ```bash
+   cd whites_brights_rider
+   ```
+
+2. Install Flutter dependencies:
+   ```bash
+   flutter pub get
+   ```
+
+3. Update the API base URL in `lib/services/api_service.dart`
+
+4. Run the app:
+   ```bash
+   flutter run
+   ```
+
+## Project Structure
+
+### Backend Structure
+
+```
+laundry-backend/
+├── controllers/       # Request handlers
+├── middleware/        # Auth and role-based access control
+├── models/            # MongoDB schemas
+├── routes/            # API routes
+├── utils/             # Helper functions
+├── .env               # Environment variables (not in repo)
+├── package.json       # Dependencies
+└── server.js          # Entry point
+```
+
+### Flutter Apps Structure
+
+```
+whites_brights_laundry/ or whites_brights_rider/
+├── lib/
+│   ├── constants/     # App constants, themes
+│   ├── models/        # Data models
+│   ├── providers/     # State management
+│   ├── screens/       # UI screens
+│   ├── services/      # API services
+│   ├── utils/         # Helper functions
+│   ├── widgets/       # Reusable UI components
+│   └── main.dart      # Entry point
+├── assets/            # Images, fonts
+└── pubspec.yaml       # Dependencies
+```
+
+## State Management
+
+The app uses Provider for state management with the following key providers:
+
+1. **AddressProvider**: Manages address data with MongoDB integration
+2. **ServiceProvider**: Manages service data with minimal implementation
+3. **UserProvider**: Manages user authentication and profile data
+4. **OrderProvider**: Manages order data and status
+5. **AuthProvider**: Handles authentication logic
+6. **RiderProvider**: Manages rider-specific functionality (rider app only)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Commit your changes: `git commit -m 'Add some feature'`
+4. Push to the branch: `git push origin feature/your-feature-name`
+5. Open a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Screenshots
 
